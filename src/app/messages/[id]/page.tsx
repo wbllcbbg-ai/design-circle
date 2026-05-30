@@ -17,6 +17,7 @@ type Message = {
 export default function ConversationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [messages, setMessages] = useState<Message[]>([])
+  const [loading, setLoading] = useState(true)
   const [newMsg, setNewMsg] = useState("")
   const [sending, setSending] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
@@ -24,6 +25,7 @@ export default function ConversationDetailPage({ params }: { params: Promise<{ i
   const supabase = createClient()
 
   const loadMessages = async () => {
+    setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     setUserId(user.id)
@@ -33,6 +35,7 @@ export default function ConversationDetailPage({ params }: { params: Promise<{ i
       const data = await res.json()
       setMessages(data.messages ?? [])
     }
+    setLoading(false)
   }
 
   useEffect(() => { loadMessages() }, [id])
@@ -70,7 +73,12 @@ export default function ConversationDetailPage({ params }: { params: Promise<{ i
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-        {messages.map((msg) => {
+        {loading && (
+          <div className="flex items-center justify-center py-16">
+            <div className="animate-spin w-6 h-6 border-2 border-zinc-300 border-t-zinc-600 rounded-full" />
+          </div>
+        )}
+        {!loading && messages.map((msg) => {
           const isMe = msg.sender_id === userId
           return (
             <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
@@ -89,7 +97,7 @@ export default function ConversationDetailPage({ params }: { params: Promise<{ i
             </div>
           )
         })}
-        {messages.length === 0 && (
+        {!loading && messages.length === 0 && (
           <div className="flex items-center justify-center py-10 text-xs text-zinc-400">暂无消息，发送第一条消息吧</div>
         )}
         <div ref={bottomRef} />

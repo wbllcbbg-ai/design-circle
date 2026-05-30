@@ -2,6 +2,24 @@ import { createDirectClient } from "@/lib/supabase/client"
 import { getCurrentUserId } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
+export const dynamic = "force-dynamic"
+
+// 获取案例列表（支持风格筛选）
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const style = searchParams.get("style") || ""
+
+  const supabase = createDirectClient()
+  let query = supabase.from("cases").select("*").order("created_at", { ascending: false }).limit(50)
+
+  if (style) {
+    query = query.eq("style", style)
+  }
+
+  const { data } = await query
+  return NextResponse.json({ cases: data ?? [] })
+}
+
 export async function POST(req: Request) {
   const userId = await getCurrentUserId()
   if (!userId) {

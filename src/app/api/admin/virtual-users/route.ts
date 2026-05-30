@@ -158,6 +158,30 @@ export async function POST(req: Request) {
         if (userRecord) {
           await supabase.from("virtual_users").update({ user_id: userRecord.id }).eq("id", vu.id)
         }
+
+        // 设计师角色还需要在 designers 表创建记录（供案例发布使用）
+        if (vu.role === "designer") {
+          const { data: existingDesigner } = await supabase
+            .from("designers")
+            .select("id")
+            .eq("user_id", vu.id)
+            .maybeSingle()
+
+          if (!existingDesigner) {
+            await supabase.from("designers").insert({
+              user_id: vu.id,
+              type: "designer",
+              name: vu.nickname,
+              description: `${vu.specialty || "全案设计"} · 重庆`,
+              specialties: vu.interest_tags || [],
+              city_id: null,
+              is_verified: false,
+              avg_rating: 0.0,
+              review_count: 0,
+              case_count: 0,
+            })
+          }
+        }
       }
     }
 

@@ -145,10 +145,22 @@ export async function POST(req: Request) {
 
   // 案例
   if (types.includes("case")) {
-    const designers = virtualUsers.filter(u => u.role === "designer")
-    const count = Math.min(designers.length, 3)
+    const virtualDesigners = virtualUsers.filter(u => u.role === "designer")
+    const count = Math.min(virtualDesigners.length, 3)
     for (let i = 0; i < count; i++) {
-      const user = designers[i]
+      const user = virtualDesigners[i]
+      // 查找该虚拟用户对应的 designers 表记录
+      const { data: designerRecord } = await supabase
+        .from("designers")
+        .select("id")
+        .eq("user_id", user.user_id)
+        .maybeSingle()
+
+      if (!designerRecord) {
+        results.push({ type: "case", error: `设计师 ${user.nickname} 没有对应的设计师记录` })
+        continue
+      }
+
       try {
         const history = await getVirtualUserHistory(supabase, user.id)
         const caseItem = await generateCase(user, history)
@@ -159,6 +171,7 @@ export async function POST(req: Request) {
           budget: caseItem.budget,
           description: caseItem.description,
           images: caseItem.images,
+          designer_id: designerRecord.id,
           virtual_user_id: user.id,
           published_at: schedulePublishTime(strategy, user),
           view_count: Math.floor(Math.random() * 500) + 20,
