@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import Link from "next/link"
 
 type Rule = {
   id: string
@@ -91,19 +90,10 @@ export default function AdminRewardsPage() {
     })
   }
 
-  if (loading) return <div className="bg-white dark:bg-zinc-900 min-h-screen flex items-center justify-center text-sm text-zinc-400">加载中...</div>
+  if (loading) return <div className="flex items-center justify-center py-10 text-sm text-zinc-400">加载中...</div>
 
   return (
-    <div className="bg-white dark:bg-zinc-900 min-h-screen">
-      <div className="flex items-center gap-2 px-4 h-12 border-b border-zinc-100 dark:border-zinc-800">
-        <Link href="/admin" className="p-1">
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-        </Link>
-        <h1 className="text-sm font-medium">奖励规则配置</h1>
-      </div>
-
+    <div>
       {/* 表单 */}
       <div className="p-4 border-b border-zinc-100 dark:border-zinc-800">
         <h2 className="text-sm font-medium mb-3">{editing ? "编辑规则" : "新增规则"}</h2>
