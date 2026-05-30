@@ -14,6 +14,8 @@ type FeedItem = {
   area: number
   category: string
   imgIndex: number
+  coverUrl: string | null
+  firstImage: string | null
 }
 
 export default function HomePage() {
@@ -34,6 +36,8 @@ export default function HomePage() {
             area: c.area,
             category: "整屋案例",
             imgIndex: i,
+            coverUrl: c.cover_url || null,
+            firstImage: c.images?.[0] || null,
           })),
           ...(data.articles ?? []).map((a: any, i: number) => ({
             type: "article" as const,
@@ -44,6 +48,8 @@ export default function HomePage() {
             area: 0,
             category: "装修攻略",
             imgIndex: i + 10,
+            coverUrl: a.cover_url || null,
+            firstImage: null,
           })),
         ]
         feed.sort((a, b) => b.likes - a.likes)
@@ -92,7 +98,7 @@ function FeedCard({ item, index, activeTab }: { item: FeedItem; index: number; a
 
   const href = item.type === "case" ? `/cases/${item.id}` : `/articles/${item.id}`
   const isArticle = item.type === "article"
-  const imgSrc = isArticle ? getArticleCover(index) : getCover(index)
+  const imgSrc = item.coverUrl || item.firstImage || (isArticle ? getArticleCover(index) : getCover(index))
 
   return (
     <Link href={href} className="block">
