@@ -1,0 +1,5 @@
+{
+  "buildCommand": "npx next build --webpack",
+  "installCommand": "npm install --prefer-offline",
+  "framework": "nextjs"
+}
