@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 设计圈
 
-## Getting Started
+> 家居设计点评社区 —— 连接业主与设计师的装修平台
 
-First, run the development server:
+设计圈是一个面向重庆地区的家居装修垂直社区，业主可以浏览装修案例、阅读装修攻略、咨询设计师；设计师可以展示作品、积累口碑、获取客户。
+
+## 核心功能
+
+- **装修案例库** — 浏览真实装修案例，按风格/面积筛选
+- **装修攻略文章** — AI 生成 + 人工发布的装修知识内容
+- **设计师生态** — 设计师入驻、作品展示、评价体系、在线咨询
+- **社区互动** — 点赞、收藏、评论、评价、提问
+- **AI 内容工厂** — 虚拟用户 + AI 内容生成，营造活跃社区氛围
+
+## 快速开始
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 安装依赖
+npm install
+
+# 本地开发（注意：需用 webpack 模式）
+npm run dev -- --webpack
+
+# 生产构建
+npm run build -- --webpack
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 技术栈
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Next.js 16.2.6 + React 19 + TypeScript + Tailwind CSS + Supabase + DeepSeek API + Unsplash API
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 项目文档
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+完整开发者指南见 [`DEVELOPER_GUIDE.md`](./DEVELOPER_GUIDE.md)，设计文档见 [`docs/`](./docs) 目录。
