@@ -2,6 +2,40 @@ import { getCurrentUserId } from "@/lib/supabase/server"
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
 
+// 点赞后通知内容作者
+async function createLikeNotification(supabase: ReturnType<typeof createDirectClient>, actorId: string, targetType: string, targetId: string) {
+  let ownerId: string | null = null
+  let title = ""
+
+  if (targetType === "case") {
+    const { data: c } = await supabase.from("cases").select("designer_id, title").eq("id", targetId).single()
+    if (c) {
+      const { data: d } = await supabase.from("designers").select("user_id").eq("id", c.designer_id).single()
+      if (d) ownerId = d.user_id
+      title = c.title
+    }
+  } else if (targetType === "article") {
+    const { data: a } = await supabase.from("articles").select("author_id, title").eq("id", targetId).single()
+    if (a) {
+      ownerId = a.author_id
+      title = a.title
+    }
+  }
+
+  if (ownerId && ownerId !== actorId) {
+    const { data: actor } = await supabase.from("users").select("nickname").eq("id", actorId).single()
+    const label = targetType === "case" ? "案例" : "文章"
+    await supabase.from("notifications").insert({
+      user_id: ownerId,
+      type: "like",
+      actor_id: actorId,
+      target_type: targetType,
+      target_id: targetId,
+      content: `${actor?.nickname || "某人"} 赞了你的${label}：${title.slice(0, 30)}`,
+    })
+  }
+}
+
 export const dynamic = "force-dynamic"
 
 // 获取用户对某个目标的点赞状态
@@ -66,6 +100,9 @@ export async function POST(req: Request) {
       { onConflict: "user_id,target_type,target_id", ignoreDuplicates: true },
     )
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // 发通知给内容作者
+    await createLikeNotification(supabase, userId, target_type, target_id)
   } else {
     const { error } = await supabase
       .from("likes")

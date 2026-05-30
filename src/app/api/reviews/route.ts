@@ -32,5 +32,21 @@ export async function POST(req: Request) {
   }).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 发通知给被评价的设计师
+  const { data: designer } = await supabase.from("designers").select("user_id, name").eq("id", designer_id).single()
+  if (designer && designer.user_id !== userId) {
+    const { data: actor } = await supabase.from("users").select("nickname").eq("id", userId).single()
+    const snippet = content.slice(0, 40)
+    await supabase.from("notifications").insert({
+      user_id: designer.user_id,
+      type: "review",
+      actor_id: userId,
+      target_type: "designer",
+      target_id: designer_id,
+      content: `${actor?.nickname || "某人"} 评价了你的设计（${rating}分）：${snippet}`,
+    })
+  }
+
   return NextResponse.json({ success: true, review: data })
 }

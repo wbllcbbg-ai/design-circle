@@ -167,15 +167,21 @@ CREATE TABLE browse_history (
   UNIQUE(user_id, target_type, target_id)
 );
 
-CREATE INDEX idx_browse_history_user_id ON browse_history(user_id);
-CREATE INDEX idx_conversations_designer_id ON conversations(designer_id);
-CREATE INDEX idx_conversations_user_id ON conversations(user_id);
-CREATE INDEX idx_messages_conversation_id ON messages(conversation_id);
-CREATE INDEX idx_messages_created_at ON messages(created_at);
-CREATE INDEX idx_conversations_designer_id ON conversations(designer_id);
-CREATE INDEX idx_conversations_user_id ON conversations(user_id);
-CREATE INDEX idx_messages_conversation_id ON messages(conversation_id);
-CREATE INDEX idx_messages_created_at ON messages(created_at);
+-- 通知
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('like', 'comment', 'review')),
+  actor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  target_type TEXT NOT NULL CHECK (target_type IN ('case', 'article', 'designer')),
+  target_id UUID NOT NULL,
+  content TEXT NOT NULL DEFAULT '',
+  is_read BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_notifications_user_id ON notifications(user_id, is_read);
+CREATE INDEX idx_notifications_created_at ON notifications(created_at DESC);
 CREATE INDEX idx_designers_city_id ON designers(city_id);
 CREATE INDEX idx_designers_type ON designers(type);
 CREATE INDEX idx_designers_avg_rating ON designers(avg_rating DESC);
