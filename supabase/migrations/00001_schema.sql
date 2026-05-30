@@ -262,5 +262,35 @@ CREATE INDEX idx_designers_avg_rating ON designers(avg_rating DESC);
 CREATE INDEX idx_reviews_designer_id ON reviews(designer_id);
 CREATE INDEX idx_reviews_created_at ON reviews(created_at DESC);
 CREATE INDEX idx_articles_category ON articles(category);
+
+-- 虚拟用户池
+CREATE TABLE virtual_users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  nickname TEXT NOT NULL UNIQUE,
+  avatar_url TEXT,
+  role TEXT NOT NULL CHECK (role IN ('owner', 'designer', 'worker', 'company')),
+  city TEXT NOT NULL DEFAULT '重庆',
+  age_group TEXT CHECK (age_group IN ('25-35', '35-45', '45+')),
+  decoration_stage TEXT CHECK (decoration_stage IN ('not_started', 'ongoing', 'completed')),
+  active_periods TEXT[] NOT NULL DEFAULT '{"晚上","周末"}',
+  interest_tags TEXT[] NOT NULL DEFAULT '{}',
+  tone_style TEXT NOT NULL DEFAULT 'casual' CHECK (tone_style IN ('professional', 'casual', 'enthusiastic', 'concise')),
+  speak_frequency TEXT NOT NULL DEFAULT 'normal' CHECK (speak_frequency IN ('active', 'normal', 'occasional')),
+  specialty TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  content_count INT NOT NULL DEFAULT 0,
+  last_active_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_virtual_users_role ON virtual_users(role);
+CREATE INDEX idx_virtual_users_is_active ON virtual_users(is_active);
+
+-- 为内容表加 virtual_user_id 字段
+ALTER TABLE articles ADD COLUMN IF NOT EXISTS virtual_user_id UUID REFERENCES virtual_users(id);
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS virtual_user_id UUID REFERENCES virtual_users(id);
+ALTER TABLE comments ADD COLUMN IF NOT EXISTS virtual_user_id UUID REFERENCES virtual_users(id);
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS virtual_user_id UUID REFERENCES virtual_users(id);
 CREATE INDEX idx_articles_published_at ON articles(published_at DESC);
 CREATE INDEX idx_articles_city_id ON articles(city_id);
