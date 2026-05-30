@@ -78,9 +78,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <h1 className="text-sm font-medium">后台管理</h1>
       </div>
 
-      {/* 顶部 Tab 导航 — 替代底部 fixed */}
+      {/* 顶部 Tab 导航 */}
       <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0">
-        <div className="flex overflow-x-auto">
+        <div className="flex">
           {TABS.map((tab) => {
             const tabPath = tab.key ? `/admin${tab.key}` : "/admin"
             const isActive = activeKey === tab.key
@@ -88,7 +88,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link
                 key={tab.key}
                 href={tabPath}
-                className={`flex items-center gap-1 px-3 py-2.5 text-xs whitespace-nowrap border-b-2 transition-colors shrink-0 ${
+                className={`flex-1 flex items-center justify-center gap-1 px-1 py-2.5 text-xs whitespace-nowrap border-b-2 transition-colors ${
                   isActive
                     ? "border-zinc-900 dark:border-white text-zinc-900 dark:text-white font-medium"
                     : "border-transparent text-zinc-400 dark:text-zinc-500"
