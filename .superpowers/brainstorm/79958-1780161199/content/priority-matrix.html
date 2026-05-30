@@ -1,0 +1,77 @@
+<h2>设计圈 - 改进优先级论证</h2>
+<p class="subtitle">从产品价值和开发成本两个维度，看看各环节应该在哪个象限</p>
+
+<div class="options">
+  <div class="option" data-choice="homepage" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>🏠 首页重构</h3>
+      <p>加搜索入口 + 分类导航 + 热门设计师 + 内容流</p>
+      <div class="tags">
+        <span class="tag">产品价值: ⭐⭐⭐⭐⭐</span>
+        <span class="tag">开发成本: 中 (2-3h)</span>
+      </div>
+    </div>
+  </div>
+  <div class="option" data-choice="skeleton" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>🦴 骨架屏统一</h3>
+      <p>首页 + 案例列表 + 设计师列表三个核心入口加骨架屏</p>
+      <div class="tags">
+        <span class="tag">产品价值: ⭐⭐⭐</span>
+        <span class="tag">开发成本: 低 (1h)</span>
+      </div>
+    </div>
+  </div>
+  <div class="option" data-choice="throttle" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>⏱️ AI 内容节流</h3>
+      <p>分批发 + 内容池配比控制，防止 feed 被 AI 内容淹没</p>
+      <div class="tags">
+        <span class="tag">产品价值: ⭐⭐⭐⭐</span>
+        <span class="tag">开发成本: 低 (1h)</span>
+      </div>
+    </div>
+  </div>
+  <div class="option" data-choice="types" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>🧩 API 类型补全</h3>
+      <p>generate-content 补 request schema + 关键 API 加校验</p>
+      <div class="tags">
+        <span class="tag">产品价值: ⭐⭐</span>
+        <span class="tag">开发成本: 低 (1h)</span>
+      </div>
+    </div>
+  </div>
+  <div class="option" data-choice="tests" onclick="toggleSelect(this)">
+    <div class="letter">E</div>
+    <div class="content">
+      <h3>🧪 补充测试</h3>
+      <p>AI 生成器 + 评价审核 + 邀请系统 + 虚拟用户</p>
+      <div class="tags">
+        <span class="tag">产品价值: ⭐⭐⭐⭐</span>
+        <span class="tag">开发成本: 高 (2-3天)</span>
+      </div>
+    </div>
+  </div>
+  <div class="option" data-choice="supplier" onclick="toggleSelect(this)">
+    <div class="letter">F</div>
+    <div class="content">
+      <h3>🏗️ 材料商/工长</h3>
+      <p>DB + 类型 + 前端筛选 + API 补 supplier 分类</p>
+      <div class="tags">
+        <span class="tag">产品价值: ⭐⭐</span>
+        <span class="tag">开发成本: 中 (2-3h)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.tags { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { font-size: 10px; padding: 2px 8px; border-radius: 99px; background: var(--bg-secondary); color: var(--text-muted); }
+.option .content h3 { margin-bottom: 4px; }
+</style>

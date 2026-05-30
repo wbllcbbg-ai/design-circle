@@ -14,6 +14,7 @@ export default function ProfilePage() {
   const [phone, setPhone] = useState("")
   const [saving, setSaving] = useState(false)
   const [stats, setStats] = useState({ reviews: 0, favorites: 0, likes: 0 })
+  const [isAdmin, setIsAdmin] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -30,6 +31,11 @@ export default function ProfilePage() {
       ])
 
       setProfile(profileRes.user)
+
+      // 判断是否为 admin：优先客户端查 role，失败则 fallback 到 API profile
+      const roleRes = await supabase.from("users").select("role").eq("id", u.id).single()
+      setIsAdmin(roleRes.data?.role === "admin" || profileRes.user?.role === "admin")
+
       setStats({
         reviews: reviewRes.count ?? 0,
         favorites: favRes.count ?? 0,
@@ -135,6 +141,7 @@ export default function ProfilePage() {
               { icon: "👁️", label: "浏览历史", href: "/profile/history" },
               { icon: "📢", label: "邀请好友", href: "/invite" },
               { icon: "📊", label: "设计师工作台", href: "/dashboard" },
+              { icon: "⚙️", label: "后台管理", href: "/admin" },
             ].map((item) => (
               <Link key={item.label} href={item.href} className="flex items-center justify-between px-4 py-3.5">
                 <div className="flex items-center gap-3">
