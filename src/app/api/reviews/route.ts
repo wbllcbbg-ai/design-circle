@@ -1,7 +1,13 @@
 import { createDirectClient } from "@/lib/supabase/client"
+import { getCurrentUserId } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
+    return NextResponse.json({ error: "请先登录" }, { status: 401 })
+  }
+
   const body = await req.json()
   const { designer_id, case_id, rating, design_score, construction_score, service_score, content, images, is_real_name } = body
 
@@ -10,11 +16,9 @@ export async function POST(req: Request) {
   }
 
   const supabase = createDirectClient()
-  // 临时用一个固定用户ID
-  const { data: user } = await supabase.from("users").select("id").limit(1).single()
 
   const { data, error } = await supabase.from("reviews").insert({
-    user_id: user?.id || "00000000-0000-0000-0000-000000000001",
+    user_id: userId,
     designer_id,
     case_id: case_id || null,
     rating,

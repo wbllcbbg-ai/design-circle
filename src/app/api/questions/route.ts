@@ -1,8 +1,13 @@
 import { createDirectClient } from "@/lib/supabase/client"
+import { getCurrentUserId } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
-// 先创建 questions 表
 export async function POST(req: Request) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
+    return NextResponse.json({ error: "请先登录" }, { status: 401 })
+  }
+
   const body = await req.json()
   const { title, content, category } = body
 
@@ -11,11 +16,9 @@ export async function POST(req: Request) {
   }
 
   const supabase = createDirectClient()
-  // 临时用户
-  const { data: user } = await supabase.from("users").select("id").limit(1).single()
 
   const { data, error } = await supabase.from("questions").insert({
-    user_id: user?.id || "00000000-0000-0000-0000-000000000001",
+    user_id: userId,
     title,
     content,
     category: category || "其他",

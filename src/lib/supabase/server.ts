@@ -23,3 +23,13 @@ export async function createServerSupabaseClient() {
     },
   )
 }
+
+/**
+ * 获取当前登录用户的 ID（在 Server Action / API Route 中使用）。
+ * 未登录时返回 null。
+ */
+export async function getCurrentUserId() {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user?.id ?? null
+}

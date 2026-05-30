@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { use } from "react"
+import { useRouter } from "next/navigation"
 import { Stars } from "@/components/ui/stars"
 import Link from "next/link"
+import { createClient } from "@/lib/supabase/client"
 
 type Designer = {
   id: string
@@ -36,6 +38,8 @@ const TYPE_MAP: Record<string, string> = { designer: "设计师", company: "公�
 
 export default function DesignerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const router = useRouter()
+  const supabase = createClient()
   const [designer, setDesigner] = useState<Designer | null>(null)
   const [cases, setCases] = useState<Case[]>([])
   const [reviews, setReviews] = useState<Review[]>([])
@@ -95,7 +99,24 @@ export default function DesignerDetailPage({ params }: { params: Promise<{ id: s
           ))}
         </div>
 
-        <button className="w-full mt-4 py-2.5 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 rounded-full text-sm font-medium">
+        <button
+          onClick={async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) { router.push('/login'); return }
+            const content = prompt('你想咨询什么？')
+            if (!content) return
+            const res = await fetch('/api/conversations', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ designer_id: id, content })
+            })
+            const data = await res.json()
+            if (data.success) {
+              router.push('/messages')
+            }
+          }}
+          className="w-full mt-4 py-2.5 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 rounded-full text-sm font-medium"
+        >
           咨询{designer.name}
         </button>
       </div>

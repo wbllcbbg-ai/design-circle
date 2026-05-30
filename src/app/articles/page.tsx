@@ -12,7 +12,16 @@ type Article = {
   tags: string[]
   view_count: number
   like_count: number
+  author?: {
+    id: string
+    nickname: string
+    avatar_url: string | null
+    designer_type: string | null
+    is_verified_designer: boolean
+  }
 }
+
+const USER_TYPE_MAP: Record<string, string> = { designer: "设计师", company: "公司", worker: "工长" }
 
 const CATEGORIES = ["为你推荐", "装修攻略", "预算规划", "避坑指南", "主材选购", "风格灵感"]
 
@@ -57,6 +66,28 @@ export default function ArticlesPage() {
                 </div>
                 <div className="px-3 pt-2 pb-3">
                   <h2 className="text-sm font-medium leading-snug line-clamp-2">{a.title}</h2>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    {a.author && (
+                      <>
+                        <div className="w-4 h-4 rounded-full bg-zinc-300 dark:bg-zinc-600 overflow-hidden flex-shrink-0">
+                          {a.author.avatar_url ? (
+                            <img src={a.author.avatar_url} alt={a.author.nickname} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[8px] text-white font-medium">
+                              {a.author.nickname?.charAt(0) || "?"}
+                            </div>
+                          )}
+                        </div>
+                        <Link href={`/users/${a.author.id}`} className="text-[11px] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">{a.author.nickname}</Link>
+                        {a.author.designer_type && (
+                          <span className="text-[9px] px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-400">{USER_TYPE_MAP[a.author.designer_type] || a.author.designer_type}</span>
+                        )}
+                        {!a.author.designer_type && (
+                          <span className="text-[9px] px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-400">业主</span>
+                        )}
+                      </>
+                    )}
+                  </div>
                   <p className="text-xs text-zinc-400 mt-1 line-clamp-1">{a.summary}</p>
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center gap-2 text-xs text-zinc-400">

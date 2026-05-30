@@ -5,13 +5,20 @@ import Link from "next/link"
 export function Header() {
   return (
     <header className="sticky top-0 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-b border-zinc-100 dark:border-zinc-800 z-40 transition-shadow">
-      <div className="max-w-lg mx-auto px-4 h-12 flex items-center justify-between">
+      <div className="max-w-lg mx-auto px-4 h-12 flex items-center justify-between lg:max-w-5xl lg:px-6">
         <Link href="/" className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-zinc-900 dark:bg-white flex items-center justify-center">
             <span className="text-white dark:text-zinc-900 text-xs font-bold">设</span>
           </div>
           <span className="text-base font-bold tracking-tight">设计圈</span>
         </Link>
+
+        {/* 桌面导航 */}
+        <nav className="hidden lg:flex items-center gap-6">
+          <Link href="/cases" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition">装修案例</Link>
+          <Link href="/articles" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition">装修攻略</Link>
+          <Link href="/designers" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition">找设计师</Link>
+        </nav>
 
         <div className="flex items-center gap-3">
           <Link href="/search" className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">

@@ -15,6 +15,45 @@ type Comment = {
   user_id: string
 }
 
+type Review = {
+  id: string
+  rating: number
+  design_score: number
+  construction_score: number
+  service_score: number
+  content: string
+  created_at: string
+}
+
+type ReviewSummary = {
+  avg_rating: number
+  design_avg: number
+  construction_avg: number
+  service_avg: number
+  total: number
+}
+
+function calcSummary(reviews: Review[]): ReviewSummary {
+  if (reviews.length === 0) return { avg_rating: 0, design_avg: 0, construction_avg: 0, service_avg: 0, total: 0 }
+  return {
+    avg_rating: reviews.reduce((s, r) => s + r.rating, 0) / reviews.length,
+    design_avg: reviews.reduce((s, r) => s + (r.design_score || r.rating), 0) / reviews.length,
+    construction_avg: reviews.reduce((s, r) => s + (r.construction_score || r.rating), 0) / reviews.length,
+    service_avg: reviews.reduce((s, r) => s + (r.service_score || r.rating), 0) / reviews.length,
+    total: reviews.length,
+  }
+}
+
+const StarBar = ({ score, label }: { score: number; label: string }) => (
+  <div className="flex items-center gap-2 text-xs">
+    <span className="w-8 text-zinc-400 shrink-0">{label}</span>
+    <div className="flex-1 h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+      <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${(score / 5) * 100}%` }} />
+    </div>
+    <span className="w-6 text-right text-zinc-500">{score.toFixed(1)}</span>
+  </div>
+)
+
 export default function CaseDetailPage({
   params,
 }: {
@@ -23,22 +62,42 @@ export default function CaseDetailPage({
   const { id } = use(params)
   const [data, setData] = useState<any>(null)
   const [comments, setComments] = useState<Comment[]>([])
+  const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [newComment, setNewComment] = useState("")
   const [posting, setPosting] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [liked, setLiked] = useState(false)
+  const [likeCount, setLikeCount] = useState(0)
+  const [favorited, setFavorited] = useState(false)
   const supabase = createClient()
 
   const loadData = async () => {
-    const [caseRes, commentRes, userRes] = await Promise.all([
+    const [caseRes, commentRes, userRes, likeRes, favRes, reviewRes] = await Promise.all([
       fetch(`/api/cases/${id}`).then((r) => r.json()),
       fetch(`/api/comments?target_type=case&target_id=${id}`).then((r) => r.json()),
       supabase.auth.getUser(),
+      fetch(`/api/likes?target_type=case&target_id=${id}`).then((r) => r.json()),
+      fetch(`/api/favorites?target_type=case&target_id=${id}`).then((r) => r.json()),
+      fetch(`/api/cases/${id}/reviews`).then((r) => r.json()),
     ])
     setData(caseRes.case)
     setComments(commentRes.comments ?? [])
+    setReviews(reviewRes.reviews ?? [])
     setUser(userRes.data.user)
+    setLiked(likeRes.liked)
+    setLikeCount(likeRes.like_count)
+    setFavorited(favRes.favorited)
     setLoading(false)
+
+    // 记录浏览历史
+    if (userRes.data.user) {
+      fetch("/api/browse-history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target_type: "case", target_id: id }),
+      }).catch(() => {})
+    }
   }
 
   useEffect(() => { loadData() }, [id])
@@ -57,6 +116,35 @@ export default function CaseDetailPage({
     }
     setPosting(false)
   }
+
+  const handleLike = async () => {
+    if (!user) return
+    const res = await fetch("/api/likes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_type: "case", target_id: id, action: liked ? "unlike" : "like" }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setLiked(data.liked)
+      setLikeCount(data.like_count)
+    }
+  }
+
+  const handleFavorite = async () => {
+    if (!user) return
+    const res = await fetch("/api/favorites", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_type: "case", target_id: id, action: favorited ? "unfavorite" : "favorite" }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setFavorited(data.favorited)
+    }
+  }
+
+  const summary = calcSummary(reviews)
 
   if (loading) {
     return (
@@ -96,12 +184,49 @@ export default function CaseDetailPage({
 
         <p className="text-sm text-zinc-700 dark:text-zinc-300 mt-3 leading-relaxed whitespace-pre-line">{data.description}</p>
 
+        {/* 评价摘要 */}
+        {summary.total > 0 && (
+          <div className="mt-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
+            <Link href={`/cases/${id}/reviews`} className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium">用户评价</h3>
+              <div className="flex items-center gap-1 text-xs text-zinc-400">
+                <span>{summary.total}条评价</span>
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </div>
+            </Link>
+
+            <div className="flex items-center gap-3 mb-3">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-amber-500">{summary.avg_rating.toFixed(1)}</div>
+                <div className="text-[10px] text-zinc-400">综合评分</div>
+              </div>
+              <div className="flex-1 space-y-1.5">
+                <StarBar score={summary.design_avg} label="设计" />
+                <StarBar score={summary.construction_avg} label="施工" />
+                <StarBar score={summary.service_avg} label="服务" />
+              </div>
+            </div>
+
+            {/* 最新几条评价 */}
+            <div className="space-y-2">
+              {reviews.slice(0, 2).map((review) => (
+                <div key={review.id} className="text-xs text-zinc-500 dark:text-zinc-400">
+                  <div className="text-amber-400 text-[10px]">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
+                  <p className="line-clamp-2 mt-0.5">{review.content}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-6 mt-4 py-3 border-t border-zinc-100 dark:border-zinc-800">
-          <button className="flex items-center gap-1.5 text-sm text-zinc-500">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <button onClick={handleLike} className={`flex items-center gap-1.5 text-sm ${liked ? "text-red-500" : "text-zinc-500"}`}>
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill={liked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
               <path d="M7 22V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v18l-4-2.5Z" />
             </svg>
-            {data.like_count}
+            {likeCount}
           </button>
           <button className="flex items-center gap-1.5 text-sm text-zinc-500">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -109,9 +234,9 @@ export default function CaseDetailPage({
             </svg>
             评论
           </button>
-          <button className="flex items-center gap-1.5 text-sm text-zinc-500">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M12 10v4m0 0v4m0-4h4m-4 0H8" />
+          <button onClick={handleFavorite} className={`flex items-center gap-1.5 text-sm ${favorited ? "text-amber-500" : "text-zinc-500"}`}>
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill={favorited ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
             </svg>
             收藏
           </button>

@@ -1,7 +1,13 @@
 import { createDirectClient } from "@/lib/supabase/client"
+import { getCurrentUserId } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
+    return NextResponse.json({ error: "请先登录" }, { status: 401 })
+  }
+
   const body = await req.json()
   const { title, description, style, area, budget, duration, cover_url, images } = body
 
@@ -11,11 +17,19 @@ export async function POST(req: Request) {
 
   const supabase = createDirectClient()
 
-  // 临时用一个固定设计师ID（后续接入认证后换成真实的）
-  const { data: designer } = await supabase.from("designers").select("id").limit(1).single()
+  // 查找当前用户关联的设计师身份
+  const { data: designer } = await supabase
+    .from("designers")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  if (!designer) {
+    return NextResponse.json({ error: "只有认证设计师才能发布案例" }, { status: 403 })
+  }
 
   const { data, error } = await supabase.from("cases").insert({
-    designer_id: designer?.id || "00000000-0000-0000-0000-000000000001",
+    designer_id: designer.id,
     title,
     description: description || "",
     cover_url: cover_url || "",
