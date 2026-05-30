@@ -1,12 +1,11 @@
 import { createDirectClient } from "@/lib/supabase/client"
-import { getCurrentUserId } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { requireAuth, requireAdmin } from "@/lib/auth-guard"
 
 export async function POST(req: Request) {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: "请先登录" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (typeof auth !== "string") return auth
+  const userId = auth
 
   const body = await req.json()
   const { type, name, phone, description, specialties, city_id } = body
@@ -35,13 +34,10 @@ export async function POST(req: Request) {
 
 // 审核接口 (管理员)
 export async function PUT(req: Request) {
-  const adminUserId = await getCurrentUserId()
-  if (!adminUserId) return NextResponse.json({ error: "请先登录" }, { status: 401 })
+  const adminAuth = await requireAdmin()
+  if (typeof adminAuth !== "string") return adminAuth
 
   const supabase = createDirectClient()
-  // 验证管理员身份
-  const { data: admin } = await supabase.from("users").select("role").eq("id", adminUserId).single()
-  if (admin?.role !== "admin") return NextResponse.json({ error: "无权操作" }, { status: 403 })
 
   const body = await req.json()
   const { id, status } = body

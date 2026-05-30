@@ -1,6 +1,6 @@
 import { createDirectClient } from "@/lib/supabase/client"
-import { getCurrentUserId } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { requireAuth } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
@@ -21,10 +21,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: "请先登录" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (typeof auth !== "string") return auth
+  const userId = auth
 
   const body = await req.json()
   const { title, description, style, area, budget, duration, cover_url, images } = body

@@ -1,6 +1,6 @@
-import { getCurrentUserId } from "@/lib/supabase/server"
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
+import { requireAuth } from "@/lib/auth-guard"
 
 // 点赞后通知内容作者
 async function createLikeNotification(supabase: ReturnType<typeof createDirectClient>, actorId: string, targetType: string, targetId: string) {
@@ -40,9 +40,24 @@ export const dynamic = "force-dynamic"
 
 // 获取用户对某个目标的点赞状态
 export async function GET(req: Request) {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ liked: false, like_count: 0 })
+  const auth = await requireAuth()
+  // 未登录用户返回未点赞状态（公开可读）
+  if (typeof auth !== "string") {
+    const { searchParams } = new URL(req.url)
+    const targetType = searchParams.get("target_type")
+    const targetId = searchParams.get("target_id")
+    if (!targetType || !targetId) {
+      return NextResponse.json({ liked: false, like_count: 0 })
+    }
+    const supabase = createDirectClient()
+    const { count } = await supabase
+      .from("likes")
+      .select("*", { count: "exact", head: true })
+      .eq("target_type", targetType)
+      .eq("target_id", targetId)
+    return NextResponse.json({ liked: false, like_count: count ?? 0 })
+  }
+  const userId = auth
   }
 
   const { searchParams } = new URL(req.url)
@@ -76,10 +91,9 @@ export async function GET(req: Request) {
 
 // 点赞/取消点赞
 export async function POST(req: Request) {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: "请先登录" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (typeof auth !== "string") return auth
+  const userId = auth
 
   const body = await req.json()
   const { target_type, target_id, action } = body

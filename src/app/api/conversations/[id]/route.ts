@@ -1,13 +1,14 @@
-import { getCurrentUserId } from "@/lib/supabase/server"
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
+import { requireAuth } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
 // 获取对话的消息列表
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const userId = await getCurrentUserId()
-  if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  const auth = await requireAuth()
+  if (typeof auth !== "string") return auth
+  const userId = auth
 
   const { id } = await params
   const supabase = createDirectClient()
@@ -50,8 +51,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 // 发送消息
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const userId = await getCurrentUserId()
-  if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  const auth = await requireAuth()
+  if (typeof auth !== "string") return auth
+  const userId = auth
 
   const { id } = await params
   const body = await req.json()

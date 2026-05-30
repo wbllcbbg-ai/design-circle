@@ -1,6 +1,6 @@
 import { createDirectClient } from "@/lib/supabase/client"
-import { getCurrentUserId } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { requireAuth } from "@/lib/auth-guard"
 
 // AI 模拟审核
 function aiReview(content: string, rating: number): { status: string; confidence: number; flags: string[] } {
@@ -20,10 +20,9 @@ function aiReview(content: string, rating: number): { status: string; confidence
 }
 
 export async function POST(req: Request) {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: "请先登录" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (typeof auth !== "string") return auth
+  const userId = auth
 
   const body = await req.json()
   const { designer_id, case_id, rating, design_score, construction_score, service_score, content, images, is_real_name, source } = body

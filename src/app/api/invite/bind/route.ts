@@ -1,12 +1,13 @@
-import { getCurrentUserId } from "@/lib/supabase/server"
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
+import { requireAuth } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
 export async function POST(req: Request) {
-  const userId = await getCurrentUserId()
-  if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  const auth = await requireAuth()
+  if (typeof auth !== "string") return auth
+  const userId = auth
 
   const body = await req.json()
   const { code, channel } = body
@@ -46,11 +47,12 @@ export async function POST(req: Request) {
 
   const now = new Date().toISOString()
 
-  // 给邀请人加积分
-  await supabase.from("user_points").upsert(
-    { user_id: invite.inviter_id, points: 10, total_earned: 10, total_invites: 1, updated_at: now },
-    { onConflict: "user_id", ignoreDuplicates: false },
-  )
+  // 给邀请人加积分（原子增量，避免覆盖）
+  await supabase.rpc("increment_user_points", {
+    p_user_id: invite.inviter_id,
+    p_points: 10,
+    p_total_invites: 1,
+  })
   await supabase.from("point_records").insert({
     user_id: invite.inviter_id,
     amount: 10,
@@ -58,11 +60,12 @@ export async function POST(req: Request) {
     related_invite_id: invite.id,
   })
 
-  // 给被邀请人加积分
-  await supabase.from("user_points").upsert(
-    { user_id: userId, points: 5, total_earned: 5, total_invites: 0, updated_at: now },
-    { onConflict: "user_id", ignoreDuplicates: false },
-  )
+  // 给被邀请人加积分（原子增量）
+  await supabase.rpc("increment_user_points", {
+    p_user_id: userId,
+    p_points: 5,
+    p_total_invites: 0,
+  })
   await supabase.from("point_records").insert({
     user_id: userId,
     amount: 5,

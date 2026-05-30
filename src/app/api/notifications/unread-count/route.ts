@@ -1,14 +1,16 @@
-import { getCurrentUserId } from "@/lib/supabase/server"
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
+import { requireAuth } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
 export async function GET() {
-  const userId = await getCurrentUserId()
-  if (!userId) {
+  const auth = await requireAuth()
+  // 未登录用户返回 0（公开可读，用于 Header 轮询）
+  if (typeof auth !== "string") {
     return NextResponse.json({ unread: 0 })
   }
+  const userId = auth
 
   const supabase = createDirectClient()
   const { count } = await supabase

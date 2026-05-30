@@ -1,6 +1,7 @@
-import { createServerSupabaseClient, getCurrentUserId } from "@/lib/supabase/server"
+import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
+import { requireAuth } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
@@ -28,11 +29,9 @@ export async function GET(req: Request) {
 
 // 创建评论
 export async function POST(req: Request) {
-  const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (typeof auth !== "string") return auth
+  const userId = auth
 
   const body = await req.json()
   const { target_type, target_id, content, parent_id } = body
@@ -41,10 +40,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 })
   }
 
+  const supabase = createDirectClient()
+
   const { data, error } = await supabase.from("comments").insert({
     target_type,
     target_id,
-    user_id: user.id,
+    user_id: userId,
     content,
     parent_id: parent_id || null,
   }).select().single()
@@ -52,33 +53,32 @@ export async function POST(req: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // 发通知给内容作者
-  const directClient = createDirectClient()
   let ownerId: string | null = null
   let title = ""
 
   if (target_type === "case") {
-    const { data: c } = await directClient.from("cases").select("designer_id, title").eq("id", target_id).single()
+    const { data: c } = await supabase.from("cases").select("designer_id, title").eq("id", target_id).single()
     if (c) {
-      const { data: d } = await directClient.from("designers").select("user_id").eq("id", c.designer_id).single()
+      const { data: d } = await supabase.from("designers").select("user_id").eq("id", c.designer_id).single()
       if (d) ownerId = d.user_id
       title = c.title
     }
   } else if (target_type === "article") {
-    const { data: a } = await directClient.from("articles").select("author_id, title").eq("id", target_id).single()
+    const { data: a } = await supabase.from("articles").select("author_id, title").eq("id", target_id).single()
     if (a) {
       ownerId = a.author_id
       title = a.title
     }
   }
 
-  if (ownerId && ownerId !== user.id) {
-    const { data: actor } = await directClient.from("users").select("nickname").eq("id", user.id).single()
+  if (ownerId && ownerId !== userId) {
+    const { data: actor } = await supabase.from("users").select("nickname").eq("id", userId).single()
     const label = target_type === "case" ? "案例" : "文章"
     const snippet = content.slice(0, 40)
-    await directClient.from("notifications").insert({
+    await supabase.from("notifications").insert({
       user_id: ownerId,
       type: "comment",
-      actor_id: user.id,
+      actor_id: userId,
       target_type,
       target_id,
       content: `${actor?.nickname || "某人"} 评论了你的${label}：${snippet}`,

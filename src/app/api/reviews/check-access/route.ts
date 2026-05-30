@@ -1,14 +1,15 @@
-import { getCurrentUserId } from "@/lib/supabase/server"
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
+import { requireAuth } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
 export async function GET(req: Request) {
-  const userId = await getCurrentUserId()
-  if (!userId) {
+  const auth = await requireAuth()
+  if (typeof auth !== "string") {
     return NextResponse.json({ can_review: false, reason: "请先登录" })
   }
+  const userId = auth
 
   const { searchParams } = new URL(req.url)
   const designerId = searchParams.get("designer_id")

@@ -1,12 +1,13 @@
-import { getCurrentUserId } from "@/lib/supabase/server"
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
+import { requireAuth } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
 export async function GET() {
-  const userId = await getCurrentUserId()
-  if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  const auth = await requireAuth()
+  if (typeof auth !== "string") return auth
+  const userId = auth
 
   const supabase = createDirectClient()
   const { data } = await supabase

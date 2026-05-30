@@ -1,17 +1,8 @@
-import { getCurrentUserId } from "@/lib/supabase/server"
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
+import { requireAdmin } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
-
-async function requireAdmin() {
-  const userId = await getCurrentUserId()
-  if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
-  const supabase = createDirectClient()
-  const { data: user } = await supabase.from("users").select("role").eq("id", userId).single()
-  if (user?.role !== "admin") return NextResponse.json({ error: "forbidden" }, { status: 403 })
-  return null
-}
 
 // GET /api/admin/virtual-users — list with search/filter/pagination
 export async function GET(req: Request) {

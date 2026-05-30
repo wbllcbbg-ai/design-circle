@@ -1,12 +1,13 @@
-import { getCurrentUserId } from "@/lib/supabase/server"
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
+import { requireAuth } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
 export async function GET() {
-  const userId = await getCurrentUserId()
-  if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  const auth = await requireAuth()
+  if (typeof auth !== "string") return auth
+  const userId = auth
 
   const supabase = createDirectClient()
 
@@ -17,14 +18,23 @@ export async function GET() {
     .order("created_at", { ascending: false })
     .limit(50)
 
-  const list = (data ?? []).map(async (item: any) => {
-    if (item.invitee_id) {
-      const { data: u } = await supabase.from("users").select("nickname").eq("id", item.invitee_id).single()
-      return { ...item, invitee_nickname: u?.nickname || null }
-    }
-    return { ...item, invitee_nickname: null }
-  })
+  const items = data ?? []
 
-  const result = await Promise.all(list)
+  // 批量查 invitee 昵称
+  const inviteeIds = [...new Set(items.map((i) => i.invitee_id).filter(Boolean))]
+  const { data: users } = inviteeIds.length > 0
+    ? await supabase.from("users").select("id, nickname").in("id", inviteeIds)
+    : { data: [] }
+
+  const nicknameMap: Record<string, string> = {}
+  for (const u of users ?? []) {
+    nicknameMap[u.id] = u.nickname
+  }
+
+  const result = items.map((item) => ({
+    ...item,
+    invitee_nickname: item.invitee_id ? nicknameMap[item.invitee_id] || null : null,
+  }))
+
   return NextResponse.json({ invites: result })
 }
