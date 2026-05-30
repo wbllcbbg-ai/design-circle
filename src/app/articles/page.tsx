@@ -8,6 +8,7 @@ type Article = {
   id: string
   title: string
   summary: string
+  cover_url: string | null
   category: string
   tags: string[]
   view_count: number
@@ -61,7 +62,7 @@ export default function ArticlesPage() {
             <Link key={a.id} href={`/articles/${a.id}`} className="block">
               <article>
                 <div className="w-full aspect-[4/3] relative overflow-hidden bg-zinc-100 dark:bg-zinc-800">
-                  <img src={getArticleCover(i)} alt={a.title} className="w-full h-full object-cover" loading="lazy" />
+                  <img src={a.cover_url || getArticleCover(i)} alt={a.title} className="w-full h-full object-cover" loading="lazy" />
                   <div className="absolute top-3 left-3 px-2 py-0.5 bg-white/90 dark:bg-zinc-900/90 backdrop-blur rounded text-[11px] font-medium text-zinc-700 dark:text-zinc-300">{a.category}</div>
                 </div>
                 <div className="px-3 pt-2 pb-3">

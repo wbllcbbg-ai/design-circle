@@ -11,6 +11,7 @@ type Article = {
   title: string
   content: string
   summary: string
+  cover_url: string | null
   category: string
   tags: string[]
   view_count: number
@@ -132,7 +133,13 @@ export default function ArticleDetailPage({
 
   return (
     <article className="bg-white dark:bg-zinc-900 min-h-screen">
-      <div className="w-full aspect-[4/3] relative" style={{ background: "linear-gradient(135deg, hsl(230, 30%, 70%), hsl(180, 25%, 60%))" }}>
+      <div className="w-full aspect-[4/3] relative bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+        {article.cover_url ? (
+          <img src={article.cover_url} alt={article.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full" style={{ background: "linear-gradient(135deg, hsl(230, 30%, 70%), hsl(180, 25%, 60%))" }} />
+        )}
+      
         <Link href="/articles" className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur flex items-center justify-center">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="m15 18-6-6 6-6" />
