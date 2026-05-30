@@ -58,7 +58,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ liked: false, like_count: count ?? 0 })
   }
   const userId = auth
-  }
 
   const { searchParams } = new URL(req.url)
   const targetType = searchParams.get("target_type")
