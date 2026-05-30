@@ -227,6 +227,18 @@ CREATE TABLE user_points (
 );
 
 CREATE UNIQUE INDEX idx_user_points_user ON user_points(user_id);
+
+-- 积分变动记录
+CREATE TABLE point_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  amount INT NOT NULL,
+  reason TEXT NOT NULL,
+  related_invite_id UUID REFERENCES invites(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_point_records_user ON point_records(user_id, created_at DESC);
 CREATE INDEX idx_designers_type ON designers(type);
 CREATE INDEX idx_designers_avg_rating ON designers(avg_rating DESC);
 CREATE INDEX idx_reviews_designer_id ON reviews(designer_id);

@@ -15,9 +15,18 @@ export async function GET() {
     .eq("user_id", userId)
     .maybeSingle()
 
+  // 查积分变动记录
+  const { data: records } = await supabase
+    .from("point_records")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50)
+
   return NextResponse.json({
     points: data?.points ?? 0,
     total_earned: data?.total_earned ?? 0,
     total_invites: data?.total_invites ?? 0,
+    records: records ?? [],
   })
 }

@@ -5,10 +5,17 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
+type PointRecord = {
+  id: string
+  amount: number
+  reason: string
+  created_at: string
+}
+
 export default function PointsPage() {
   const router = useRouter()
   const supabase = createClient()
-  const [data, setData] = useState<{ points: number; total_earned: number; total_invites: number } | null>(null)
+  const [data, setData] = useState<{ points: number; total_earned: number; total_invites: number; records: PointRecord[] } | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -51,7 +58,25 @@ export default function PointsPage() {
         </div>
       </div>
 
-      <div className="px-4 mt-6">
+      {/* 积分记录 */}
+      {data?.records && data.records.length > 0 && (
+        <div className="mt-6 px-4 pb-6">
+          <h2 className="text-sm font-medium mb-3">积分记录</h2>
+          <div className="space-y-2">
+            {data.records.map((r) => (
+              <div key={r.id} className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+                <div>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400">{r.reason}</p>
+                  <p className="text-[10px] text-zinc-400 mt-0.5">{new Date(r.created_at).toLocaleString()}</p>
+                </div>
+                <span className="text-sm font-medium text-green-600">+{r.amount}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="px-4 mt-4">
         <h2 className="text-sm font-medium mb-2">如何获取积分</h2>
         <div className="space-y-2 text-xs text-zinc-500">
           <p>• 邀请好友注册：+10 积分</p>

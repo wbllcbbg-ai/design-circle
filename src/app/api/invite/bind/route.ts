@@ -44,20 +44,34 @@ export async function POST(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  const now = new Date().toISOString()
+
   // 给邀请人加积分
   await supabase.from("user_points").upsert(
-    { user_id: invite.inviter_id, points: 10, total_earned: 10, total_invites: 1, updated_at: new Date().toISOString() },
+    { user_id: invite.inviter_id, points: 10, total_earned: 10, total_invites: 1, updated_at: now },
     { onConflict: "user_id", ignoreDuplicates: false },
   )
+  await supabase.from("point_records").insert({
+    user_id: invite.inviter_id,
+    amount: 10,
+    reason: "邀请好友注册奖励",
+    related_invite_id: invite.id,
+  })
 
   // 给被邀请人加积分
   await supabase.from("user_points").upsert(
-    { user_id: userId, points: 5, total_earned: 5, total_invites: 0, updated_at: new Date().toISOString() },
+    { user_id: userId, points: 5, total_earned: 5, total_invites: 0, updated_at: now },
     { onConflict: "user_id", ignoreDuplicates: false },
   )
+  await supabase.from("point_records").insert({
+    user_id: userId,
+    amount: 5,
+    reason: "被邀请注册奖励",
+    related_invite_id: invite.id,
+  })
 
   // 标记已奖励
-  await supabase.from("invites").update({ status: "rewarded", rewarded_at: new Date().toISOString() }).eq("id", invite.id)
+  await supabase.from("invites").update({ status: "rewarded", rewarded_at: now }).eq("id", invite.id)
 
   return NextResponse.json({ success: true })
 }
