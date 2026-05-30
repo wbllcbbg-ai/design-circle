@@ -24,12 +24,14 @@ const TYPE_MAP: Record<string, string> = {
 
 export default function DesignersPage() {
   const [designers, setDesigners] = useState<Designer[]>([])
+  const [loading, setLoading] = useState(true)
   const [active, setActive] = useState("全部")
 
   useEffect(() => {
     fetch("/api/designers")
       .then((r) => r.json())
-      .then((res) => setDesigners(res.designers ?? []))
+      .then((res) => { setDesigners(res.designers ?? []); setLoading(false) })
+      .catch(() => setLoading(false))
   }, [])
 
   return (
@@ -50,8 +52,18 @@ export default function DesignersPage() {
         </div>
       </div>
 
+      {loading && (
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin w-6 h-6 border-2 border-zinc-300 border-t-zinc-600 rounded-full" />
+        </div>
+      )}
+
+      {!loading && designers.length === 0 && (
+        <div className="px-4 py-16 text-center text-sm text-zinc-400">暂无设计师</div>
+      )}
+
       <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-        {designers.map((d, i) => {
+        {!loading && designers.map((d, i) => {
           const typeLabel = TYPE_MAP[d.type] || d.type
           if (active !== "全部" && typeLabel !== active) return null
           const hue = (i * 37 + 280) % 360
