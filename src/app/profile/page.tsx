@@ -133,6 +133,7 @@ export default function ProfilePage() {
               { icon: "⭐", label: "我的点评", href: "#" },
               { icon: "❤️", label: "我的收藏", href: "#" },
               { icon: "👁️", label: "浏览历史", href: "/profile/history" },
+              { icon: "📢", label: "邀请好友", href: "/invite" },
               { icon: "📊", label: "设计师工作台", href: "/dashboard" },
             ].map((item) => (
               <Link key={item.label} href={item.href} className="flex items-center justify-between px-4 py-3.5">

@@ -210,6 +210,24 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* 邀请客户 */}
+      <div className="px-4 pt-4">
+        <Link href="/invite" className="block p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-xl border border-amber-100 dark:border-amber-800/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium">邀请客户</h3>
+              <p className="text-xs text-zinc-500 mt-1">分享链接获取更多客户</p>
+            </div>
+            <svg className="w-5 h-5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </div>
+        </Link>
+      </div>
+
       {/* 我的案例 */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center justify-between mb-3">

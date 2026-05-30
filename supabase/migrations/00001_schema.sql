@@ -183,6 +183,50 @@ CREATE TABLE notifications (
 CREATE INDEX idx_notifications_user_id ON notifications(user_id, is_read);
 CREATE INDEX idx_notifications_created_at ON notifications(created_at DESC);
 CREATE INDEX idx_designers_city_id ON designers(city_id);
+
+-- 邀请关系
+CREATE TABLE invites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  inviter_id UUID NOT NULL REFERENCES users(id),
+  invitee_id UUID REFERENCES users(id),
+  code TEXT NOT NULL,
+  channel TEXT NOT NULL DEFAULT 'link',
+  source_url TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'registered', 'completed', 'rewarded')),
+  registered_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  rewarded_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_invites_inviter ON invites(inviter_id);
+CREATE INDEX idx_invites_invitee ON invites(invitee_id);
+CREATE UNIQUE INDEX idx_invites_code ON invites(code);
+
+-- 奖励规则
+CREATE TABLE reward_rules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  trigger_event TEXT NOT NULL DEFAULT 'register',
+  inviter_points INT NOT NULL DEFAULT 0,
+  invitee_points INT NOT NULL DEFAULT 0,
+  inviter_reward_desc TEXT,
+  invitee_reward_desc TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 用户积分
+CREATE TABLE user_points (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  points INT NOT NULL DEFAULT 0,
+  total_earned INT NOT NULL DEFAULT 0,
+  total_invites INT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX idx_user_points_user ON user_points(user_id);
 CREATE INDEX idx_designers_type ON designers(type);
 CREATE INDEX idx_designers_avg_rating ON designers(avg_rating DESC);
 CREATE INDEX idx_reviews_designer_id ON reviews(designer_id);

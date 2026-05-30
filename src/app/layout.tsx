@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { Header } from "@/components/layout/header"
 import { BottomNav } from "@/components/layout/bottom-nav"
+import { InviteTracker } from "@/components/layout/invite-tracker"
 
 export const metadata: Metadata = {
   title: "设计圈 - 家居设计点评平台",
@@ -23,6 +24,7 @@ export default function RootLayout({
     <html lang="zh-CN" className="h-full antialiased">
       <body className="min-h-full bg-zinc-50 dark:bg-zinc-950">
         <Header />
+        <InviteTracker />
         <main className="max-w-lg mx-auto pb-20 lg:max-w-5xl lg:pb-0 lg:pt-4 lg:px-4">
           <div className="lg:flex lg:gap-6">
             <div className="lg:flex-1 lg:min-w-0">

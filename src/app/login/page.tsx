@@ -12,6 +12,9 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
+  const [showInviteInput, setShowInviteInput] = useState(false)
+  const [inviteCode, setInviteCode] = useState("")
+  const [inviteValid, setInviteValid] = useState<{ valid: boolean; inviter_nickname?: string } | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -37,6 +40,10 @@ export default function LoginPage() {
       if (error) {
         setError(error.message)
       } else {
+        // 保存邀请码，登录后绑定
+        if (inviteValid?.valid) {
+          localStorage.setItem("pending_invite_code", inviteCode)
+        }
         setSent(true)
       }
     }
@@ -98,6 +105,42 @@ export default function LoginPage() {
               className="w-full px-3 py-2.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-sm outline-none"
             />
           </div>
+
+          {mode === "register" && (
+            <div>
+              <button type="button" onClick={() => setShowInviteInput(!showInviteInput)} className="text-xs text-zinc-400 underline">
+                {showInviteInput ? "收起" : "有邀请码？"}
+              </button>
+              {showInviteInput && (
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    value={inviteCode}
+                    onChange={async (e) => {
+                      const v = e.target.value.toUpperCase()
+                      setInviteCode(v)
+                      if (v.length >= 4) {
+                        try {
+                          const res = await fetch(`/api/invite/check?code=${v}`)
+                          const data = await res.json()
+                          setInviteValid(data)
+                        } catch { setInviteValid(null) }
+                      } else {
+                        setInviteValid(null)
+                      }
+                    }}
+                    placeholder="输入邀请码"
+                    className="w-full px-3 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-sm outline-none"
+                  />
+                  {inviteValid && (
+                    <p className={`text-xs mt-1 ${inviteValid.valid ? "text-green-600" : "text-red-500"}`}>
+                      {inviteValid.valid ? `你被 ${inviteValid.inviter_nickname} 邀请` : "邀请码不存在"}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {error && <p className="text-xs text-red-500">{error}</p>}
 
