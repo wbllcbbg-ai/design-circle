@@ -239,6 +239,24 @@ CREATE TABLE point_records (
 );
 
 CREATE INDEX idx_point_records_user ON point_records(user_id, created_at DESC);
+
+-- 点评审核字段
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS review_status TEXT NOT NULL DEFAULT 'pending'
+  CHECK (review_status IN ('pending', 'approved', 'rejected', 'flagged'));
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS review_source TEXT
+  CHECK (review_source IN ('consult', 'browse', 'transaction'));
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS ai_confidence DECIMAL(3,2);
+
+-- 审核标记表
+CREATE TABLE IF NOT EXISTS review_flags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  review_id UUID NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
+  flag_type TEXT NOT NULL,
+  reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX idx_designers_type ON designers(type);
 CREATE INDEX idx_designers_avg_rating ON designers(avg_rating DESC);
 CREATE INDEX idx_reviews_designer_id ON reviews(designer_id);

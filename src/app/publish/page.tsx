@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ImageUpload } from "@/components/ui/image-upload"
 
-type Mode = "select" | "case" | "review" | "question"
+type Mode = "select" | "case" | "question"
 
 // 发布案例表单
 function CaseForm({ onBack, onSuccess }: { onBack: () => void; onSuccess: () => void }) {
@@ -292,7 +292,6 @@ export default function PublishPage() {
   }
 
   if (mode === "case") return <CaseForm onBack={() => setMode("select")} onSuccess={handleSuccess} />
-  if (mode === "review") return <ReviewForm onBack={() => setMode("select")} onSuccess={handleSuccess} />
   if (mode === "question") return <QuestionForm onBack={() => setMode("select")} onSuccess={handleSuccess} />
 
   return (
@@ -316,10 +315,6 @@ export default function PublishPage() {
         <button onClick={() => setMode("case")} className="w-full p-4 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-left hover:bg-zinc-100 dark:hover:bg-zinc-700 transition">
           <p className="font-medium">发布案例</p>
           <p className="text-sm text-zinc-400 mt-1">分享你的装修完工实拍</p>
-        </button>
-        <button onClick={() => setMode("review")} className="w-full p-4 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-left hover:bg-zinc-100 dark:hover:bg-zinc-700 transition">
-          <p className="font-medium">写点评</p>
-          <p className="text-sm text-zinc-400 mt-1">评价你的设计师或装修公司</p>
         </button>
         <button onClick={() => setMode("question")} className="w-full p-4 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-left hover:bg-zinc-100 dark:hover:bg-zinc-700 transition">
           <p className="font-medium">提问求助</p>

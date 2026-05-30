@@ -186,8 +186,8 @@ export default function CaseDetailPage({
         <p className="text-sm text-zinc-700 dark:text-zinc-300 mt-3 leading-relaxed whitespace-pre-line">{data.description}</p>
 
         {/* 评价摘要 */}
-        {summary.total > 0 && (
-          <div className="mt-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
+        <div className="mt-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
+          {summary.total > 0 ? (
             <Link href={`/cases/${id}/reviews`} className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-medium">用户评价</h3>
               <div className="flex items-center gap-1 text-xs text-zinc-400">
@@ -197,30 +197,45 @@ export default function CaseDetailPage({
                 </svg>
               </div>
             </Link>
+          ) : (
+            <h3 className="text-sm font-medium mb-3">用户评价</h3>
+          )}
 
-            <div className="flex items-center gap-3 mb-3">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-amber-500">{summary.avg_rating.toFixed(1)}</div>
-                <div className="text-[10px] text-zinc-400">综合评分</div>
-              </div>
-              <div className="flex-1 space-y-1.5">
-                <StarBar score={summary.design_avg} label="设计" />
-                <StarBar score={summary.construction_avg} label="施工" />
-                <StarBar score={summary.service_avg} label="服务" />
-              </div>
-            </div>
-
-            {/* 最新几条评价 */}
-            <div className="space-y-2">
-              {reviews.slice(0, 2).map((review) => (
-                <div key={review.id} className="text-xs text-zinc-500 dark:text-zinc-400">
-                  <div className="text-amber-400 text-[10px]">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
-                  <p className="line-clamp-2 mt-0.5">{review.content}</p>
+          {summary.total > 0 && (
+            <>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-amber-500">{summary.avg_rating.toFixed(1)}</div>
+                  <div className="text-[10px] text-zinc-400">综合评分</div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+                <div className="flex-1 space-y-1.5">
+                  <StarBar score={summary.design_avg} label="设计" />
+                  <StarBar score={summary.construction_avg} label="施工" />
+                  <StarBar score={summary.service_avg} label="服务" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {reviews.slice(0, 2).map((review) => (
+                  <div key={review.id} className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <div className="text-amber-400 text-[10px]">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
+                    <p className="line-clamp-2 mt-0.5">{review.content}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {summary.total === 0 && (
+            <p className="text-xs text-zinc-400 mb-3">暂无评价</p>
+          )}
+
+          {data?.designer_id && (
+            <Link href={`/designers/${data.designer_id}`} className="block mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-700 text-xs text-zinc-500 text-center">
+              我也要评价这个设计师
+            </Link>
+          )}
+        </div>
 
         <div className="flex items-center gap-6 mt-4 py-3 border-t border-zinc-100 dark:border-zinc-800">
           <button onClick={handleLike} className={`flex items-center gap-1.5 text-sm ${liked ? "text-red-500" : "text-zinc-500"}`}>
