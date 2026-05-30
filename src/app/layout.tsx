@@ -7,6 +7,7 @@ import { InviteTracker } from "@/components/layout/invite-tracker"
 export const metadata: Metadata = {
   title: "设计圈 - 家居设计点评平台",
   description: "真实家居案例 · 设计口碑 · 装修避坑指南",
+  manifest: "/manifest.json",
   openGraph: {
     title: "设计圈 - 家居设计点评平台",
     description: "真实家居案例 · 设计口碑 · 装修避坑指南",
