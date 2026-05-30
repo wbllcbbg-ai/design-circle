@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { use } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { ShareButton } from "@/components/ui/share-button"
 
 type Article = {
   id: string
@@ -192,6 +193,7 @@ export default function ArticleDetailPage({
             </svg>
             收藏
           </button>
+          <ShareButton url={typeof window !== "undefined" ? `${window.location.origin}/articles/${id}` : ""} title={article?.title} />
         </div>
 
         {/* 评论区 */}

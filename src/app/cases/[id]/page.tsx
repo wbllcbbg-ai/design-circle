@@ -6,6 +6,7 @@ import { use } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { getCover } from "@/lib/images"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ShareButton } from "@/components/ui/share-button"
 
 type Comment = {
   id: string
@@ -240,6 +241,7 @@ export default function CaseDetailPage({
             </svg>
             收藏
           </button>
+          <ShareButton url={typeof window !== "undefined" ? `${window.location.origin}/cases/${id}` : ""} title={data?.title} />
         </div>
 
         {/* 评论区 */}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import QRCode from "qrcode"
 
 type Stats = {
   total: number
@@ -40,8 +41,9 @@ export default function InvitePage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [invites, setInvites] = useState<InviteItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<"link" | "code">("link")
+  const [tab, setTab] = useState<"link" | "code" | "qrcode">("link")
   const [copied, setCopied] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState("")
 
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -56,6 +58,12 @@ export default function InvitePage() {
     setStats(statsRes)
     setInvites(listRes.invites ?? [])
     setLoading(false)
+
+    // 生成二维码
+    if (codeRes.code && typeof window !== "undefined") {
+      const shareUrl = `${window.location.origin}/?ref=${codeRes.code}`
+      QRCode.toDataURL(shareUrl, { width: 200, margin: 1 }).then(setQrDataUrl).catch(() => {})
+    }
   }
 
   useEffect(() => { loadData() }, [])
@@ -84,8 +92,6 @@ export default function InvitePage() {
   }
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/?ref=${code}` : ""
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`
-
   if (loading) return <div className="bg-white dark:bg-zinc-900 min-h-screen flex items-center justify-center text-sm text-zinc-400">加载中...</div>
 
   return (
@@ -130,6 +136,7 @@ export default function InvitePage() {
           {[
             { key: "link" as const, label: "分享链接" },
             { key: "code" as const, label: "邀请码" },
+            { key: "qrcode" as const, label: "二维码" },
           ].map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-medium ${tab === t.key ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"}`}
@@ -158,6 +165,19 @@ export default function InvitePage() {
               {copied ? "已复制" : "复制邀请码"}
             </button>
             <p className="text-xs text-zinc-400 mt-3 text-center">朋友注册时输入此邀请码即可绑定</p>
+          </div>
+        )}
+        {tab === "qrcode" && (
+          <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
+            <p className="text-xs text-zinc-500 mb-3">扫描二维码</p>
+            <div className="flex justify-center py-2">
+              {qrDataUrl ? (
+                <img src={qrDataUrl} alt="邀请二维码" className="w-48 h-48" />
+              ) : (
+                <div className="w-48 h-48 bg-zinc-200 dark:bg-zinc-700 rounded-lg flex items-center justify-center text-xs text-zinc-400">生成中...</div>
+              )}
+            </div>
+            <p className="text-xs text-zinc-400 mt-3 text-center">扫码即可打开邀请链接</p>
           </div>
         )}
       </div>
