@@ -78,14 +78,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <h1 className="text-sm font-medium">后台管理</h1>
       </div>
 
-      {/* 内容区 */}
-      <div className="flex-1 overflow-y-auto pb-14">
-        {children}
-      </div>
-
-      {/* 底部 Tab 导航 */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 z-20">
-        <div className="max-w-lg mx-auto flex">
+      {/* 顶部 Tab 导航 — 替代底部 fixed */}
+      <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0">
+        <div className="flex overflow-x-auto">
           {TABS.map((tab) => {
             const tabPath = tab.key ? `/admin${tab.key}` : "/admin"
             const isActive = activeKey === tab.key
@@ -93,18 +88,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link
                 key={tab.key}
                 href={tabPath}
-                className={`flex-1 flex flex-col items-center py-1.5 text-[10px] transition-colors ${
-                  isActive ? "text-zinc-900 dark:text-white" : "text-zinc-400 dark:text-zinc-500"
+                className={`flex items-center gap-1 px-3 py-2.5 text-xs whitespace-nowrap border-b-2 transition-colors shrink-0 ${
+                  isActive
+                    ? "border-zinc-900 dark:border-white text-zinc-900 dark:text-white font-medium"
+                    : "border-transparent text-zinc-400 dark:text-zinc-500"
                 }`}
               >
-                <svg className="w-5 h-5 mb-0.5" viewBox="0 0 24 24" fill={isActive ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill={isActive ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
                   <path d={tab.icon} />
                 </svg>
-                <span>{tab.label}</span>
+                {tab.label}
               </Link>
             )
           })}
         </div>
+      </div>
+
+      {/* 内容区 */}
+      <div className="flex-1 overflow-y-auto">
+        {children}
       </div>
     </div>
   )
