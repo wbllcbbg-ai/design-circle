@@ -1,10 +1,20 @@
 import { getCurrentUserId } from "@/lib/supabase/server"
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
-import { generateArticle, generateCase, generateQuestion, generateComment, generateReview } from "@/lib/ai-generator"
+import { generateArticle, generateCase, generateQuestion, generateComment, generateReview, setRuntimeAiKey } from "@/lib/ai-generator"
+import { setUnsplashKey } from "@/lib/unsplash"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 120
+
+async function loadRuntimeConfig() {
+  const supabase = createDirectClient()
+  const { data } = await supabase.from("ai_config").select("key, value")
+  for (const row of data || []) {
+    if (row.key === "ai_api_key") setRuntimeAiKey(row.value)
+    if (row.key === "unsplash_key") setUnsplashKey(row.value)
+  }
+}
 
 async function requireAdmin() {
   const userId = await getCurrentUserId()
@@ -79,6 +89,9 @@ function schedulePublishTime(strategy: string, user: any): string {
 export async function POST(req: Request) {
   const guard = await requireAdmin()
   if (guard) return guard
+
+  // 加载运行�� AI 配置（从数据库读取 key）
+  await loadRuntimeConfig()
 
   const body = await req.json()
   const { strategy = "daily", types = ["article", "comment"] } = body

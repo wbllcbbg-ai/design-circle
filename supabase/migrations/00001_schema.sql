@@ -292,5 +292,12 @@ ALTER TABLE articles ADD COLUMN IF NOT EXISTS virtual_user_id UUID REFERENCES vi
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS virtual_user_id UUID REFERENCES virtual_users(id);
 ALTER TABLE comments ADD COLUMN IF NOT EXISTS virtual_user_id UUID REFERENCES virtual_users(id);
 ALTER TABLE reviews ADD COLUMN IF NOT EXISTS virtual_user_id UUID REFERENCES virtual_users(id);
+
+-- AI 配置表（存储 DeepSeek / Unsplash 等 API Key）
+CREATE TABLE IF NOT EXISTS ai_config (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 CREATE INDEX idx_articles_published_at ON articles(published_at DESC);
 CREATE INDEX idx_articles_city_id ON articles(city_id);

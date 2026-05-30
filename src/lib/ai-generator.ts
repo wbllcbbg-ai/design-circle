@@ -2,11 +2,20 @@ import { searchImages, getSearchQuery } from "./unsplash"
 
 const AI_BASE_URL = process.env.AI_BASE_URL || "https://api.deepseek.com/v1"
 const AI_MODEL = process.env.AI_MODEL || "deepseek-chat"
-const AI_API_KEY = process.env.AI_API_KEY || ""
 
-// 运行时从全局配置读取 key（优先于环境变量）
+// 运行时从全局配置读取 key（优先级：运行时配置 > 环境变量）
+let _cachedKey: string | null = null
+
+export function setRuntimeAiKey(key: string) {
+  _cachedKey = key
+}
+
+function getEnvAiKey(): string {
+  return process.env.AI_API_KEY || ""
+}
+
 function getApiKey(): string {
-  return (globalThis as any).__AI_API_KEY || AI_API_KEY
+  return _cachedKey || getEnvAiKey()
 }
 
 type VirtualUser = {

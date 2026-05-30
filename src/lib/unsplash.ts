@@ -1,14 +1,13 @@
 // Unsplash 图片工具 — 用于 AI 内容配图获取
 
-const UNSPLASH_ACCESS_KEY = ""
+let _cachedKey: string | null = null
 
-// 运行时从全局配置获取 key
 export function setUnsplashKey(key: string) {
-  ;(globalThis as any).__UNSPLASH_KEY = key
+  _cachedKey = key
 }
 
 function getKey(): string {
-  return (globalThis as any).__UNSPLASH_KEY || process.env.UNSPLASH_ACCESS_KEY || ""
+  return _cachedKey || process.env.UNSPLASH_ACCESS_KEY || ""
 }
 
 // 按内容类型搜索配图
