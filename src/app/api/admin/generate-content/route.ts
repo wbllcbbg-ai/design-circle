@@ -33,21 +33,26 @@ async function getVirtualUserHistory(supabase: any, virtualUserId: string, limit
     supabase.from("comments").select("content, created_at").eq("virtual_user_id", virtualUserId).order("created_at", { ascending: false }).limit(limit),
     supabase.from("reviews").select("content, created_at").eq("virtual_user_id", virtualUserId).order("created_at", { ascending: false }).limit(limit),
   ]
-  try {
-    promises.push(supabase.from("questions").select("title, content, created_at").eq("virtual_user_id", virtualUserId).order("created_at", { ascending: false }).limit(limit))
-  } catch {}
+  // questions 表可能不存在，push 不 catch（push 不会 throw，Promise.allSettled 处理失败）
+  promises.push(
+    supabase.from("questions").select("title, content, created_at").eq("virtual_user_id", virtualUserId).order("created_at", { ascending: false }).limit(limit),
+  )
 
   const results = await Promise.allSettled(promises)
   const items: any[] = []
+  const typeLabels = ["文章", "评论", "评价", "提问"]
 
-  for (const result of results) {
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i]
+    const label = typeLabels[i] || "其他"
     if (result.status === "fulfilled") {
       for (const row of result.value.data || []) {
-        if (row.title) {
-          items.push({ type: row.title ? (result.value.data?.find((r: any) => r.title) ? "文章" : "提问") : "评论", title: row.title, content: row.content, created_at: row.created_at })
-        } else {
-          items.push({ type: "评论", content: row.content, created_at: row.created_at })
-        }
+        items.push({
+          type: label,
+          title: row.title || "",
+          content: row.content || "",
+          created_at: row.created_at,
+        })
       }
     }
   }
@@ -83,7 +88,11 @@ function schedulePublishTime(strategy: string, user: any): string {
   }
 
   const d = new Date(now)
-  d.setMinutes(d.getMinutes() + 5 + Math.floor(Math.random() * 25))
+  // 如果算出的 hour 已过，推到明天同一小时
+  if (hour <= d.getHours()) {
+    d.setDate(d.getDate() + 1)
+  }
+  d.setHours(hour, Math.floor(Math.random() * 60), 0, 0)
   return d.toISOString()
 }
 
@@ -166,6 +175,7 @@ export async function POST(req: Request) {
         const history = await getVirtualUserHistory(supabase, user.id)
         const caseItem = await generateCase(user, history)
         const { data: dbResult } = await supabase.from("cases").insert({
+          is_published: true,
           title: caseItem.title,
           style: caseItem.style,
           area: caseItem.area,
@@ -221,8 +231,11 @@ export async function POST(req: Request) {
       ...(casesRes.data || []).map(c => ({ type: "case", id: c.id, title: c.title })),
     ]
 
-    const count = Math.min(virtualUsers.length, targets.length, 8)
-    for (let i = 0; i < count; i++) {
+    if (targets.length === 0) {
+      results.push({ type: "comment", error: "无可评论的新内容（所有内容已关联虚拟人）" })
+    } else {
+      const count = Math.min(virtualUsers.length, targets.length, 8)
+      for (let i = 0; i < count; i++) {
       const user = virtualUsers[i]
       const target = targets[i % targets.length]
       try {
@@ -242,6 +255,7 @@ export async function POST(req: Request) {
         results.push({ type: "comment", error: err.message })
       }
     }
+    } // else end
   }
 
   // 评价

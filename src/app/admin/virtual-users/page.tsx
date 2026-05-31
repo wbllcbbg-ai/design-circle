@@ -37,6 +37,7 @@ export default function VirtualUsersPage() {
   const [showGenerate, setShowGenerate] = useState(false)
   const [generateCount, setGenerateCount] = useState(10)
   const [generating, setGenerating] = useState(false)
+  const [batchError, setBatchError] = useState("")
 
   const loadUsers = useCallback(async () => {
     const params = new URLSearchParams()
@@ -57,11 +58,17 @@ export default function VirtualUsersPage() {
   const handleBatchAction = async (action: string) => {
     if (selected.size === 0) return
     if (action === "delete" && !confirm("确定删除选中的虚拟用户？")) return
-    await fetch("/api/admin/virtual-users/batch", {
+    setBatchError("")
+    const res = await fetch("/api/admin/virtual-users/batch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, ids: Array.from(selected) }),
     })
+    const data = await res.json()
+    if (!res.ok) {
+      setBatchError(data.error || "操作失败")
+      return
+    }
     setSelected(new Set())
     await loadUsers()
   }
@@ -160,6 +167,11 @@ export default function VirtualUsersPage() {
           <button onClick={() => handleBatchAction("enable")} className="px-2 py-1 bg-green-600 text-white rounded text-[10px]">启用</button>
           <button onClick={() => handleBatchAction("disable")} className="px-2 py-1 bg-zinc-500 text-white rounded text-[10px]">禁用</button>
           <button onClick={() => handleBatchAction("delete")} className="px-2 py-1 bg-red-500 text-white rounded text-[10px]">删除</button>
+        </div>
+      )}
+      {batchError && (
+        <div className="px-4 py-2 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800">
+          <p className="text-xs text-red-600 dark:text-red-400">{batchError}</p>
         </div>
       )}
 
@@ -289,6 +301,9 @@ export default function VirtualUsersPage() {
                   className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg text-sm outline-none" />
               </div>
 
+              {/* 内容画像（自动分析） */}
+              <ProfileSection userId={editing.id} />
+
               <button onClick={handleEditSave} className="w-full py-2.5 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 rounded-full text-sm font-medium">保存</button>
             </div>
           </div>
@@ -329,4 +344,97 @@ function hashCode(str: string) {
     hash |= 0
   }
   return Math.abs(hash)
+}
+
+// 内容画像组件
+function ProfileSection({ userId }: { userId: string }) {
+  const [profile, setProfile] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+  const [topics, setTopics] = useState<string[]>([])
+  const [style, setStyle] = useState("")
+  const [interactions, setInteractions] = useState<{ nickname: string; count: number }[]>([])
+  const [saving, setSaving] = useState(false)
+
+  const loadProfile = async (signal: AbortSignal) => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/admin/virtual-users/${userId}/profile`, { signal })
+      if (signal.aborted) return
+      const data = await res.json()
+      if (signal.aborted) return
+      if (data.profile) {
+        setProfile(data.profile)
+        setTopics(data.profile.topics || [])
+        setStyle(data.profile.style || "")
+        setInteractions(data.profile.interactions || [])
+      }
+    } catch (e: any) {
+      if (e.name === "AbortError") return
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    const controller = new AbortController()
+    loadProfile(controller.signal)
+    return () => controller.abort()
+  }, [userId])
+
+  const handleConfirm = async () => {
+    setSaving(true)
+    await fetch(`/api/admin/virtual-users/${userId}/profile`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topics, style, interactions }),
+    })
+    setSaving(false)
+  }
+
+  return (
+    <div className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-medium text-zinc-500">🎯 内容画像</p>
+        <button onClick={loadProfile} disabled={loading} className="text-[10px] text-zinc-400 underline">
+          {loading ? "分析中..." : "刷新分析"}
+        </button>
+      </div>
+
+      {!profile && !loading && (
+        <p className="text-[10px] text-zinc-400">暂无内容数据，点击「刷新分析」提取画像</p>
+      )}
+
+      {loading && <p className="text-[10px] text-zinc-400">分析中...</p>}
+
+      {profile && !loading && (
+        <div className="space-y-1.5">
+          <div>
+            <span className="text-[10px] text-zinc-400">擅长话题: </span>
+            <div className="flex flex-wrap gap-1 mt-0.5">
+              {Array.isArray(topics) && topics.map((t) => (
+                <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-white dark:bg-zinc-700 text-zinc-500">{t}</span>
+              ))}
+            </div>
+          </div>
+          {style && (
+            <p className="text-[10px] text-zinc-400">内容风格: {style}</p>
+          )}
+          {interactions.length > 0 && (
+            <div>
+              <span className="text-[10px] text-zinc-400">互动对象: </span>
+              <span className="text-[10px] text-zinc-500">
+                {interactions.map((i) => `${i.nickname}(${i.count})`).join(" ")}
+              </span>
+            </div>
+          )}
+          <button
+            onClick={handleConfirm}
+            disabled={saving}
+            className="text-[10px] px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mt-1"
+          >
+            {saving ? "保存中..." : "✓ 确认画像"}
+          </button>
+        </div>
+      )}
+    </div>
+  )
 }

@@ -7,6 +7,11 @@ export function setWanxiangEnabled(enabled: boolean) {
   _wanxiangEnabled = enabled
 }
 
+// 检查是否应该启用通义万相（运行时设置优先，fallback 到环境变量）
+function isWanxiangEnabled(): boolean {
+  return _wanxiangEnabled || !!process.env.WANXIANG_API_KEY
+}
+
 const AI_BASE_URL = process.env.AI_BASE_URL || "https://api.deepseek.com/v1"
 const AI_MODEL = process.env.AI_MODEL || "deepseek-chat"
 
@@ -83,6 +88,26 @@ const toneMap: Record<string, string> = {
   concise: "简洁直接，不说废话",
 }
 
+// 🎲 指纹散射 — 根据虚拟人 ID 生成风格偏移量
+function getToneScatter(virtualUserId: string, toneStyle: string): string {
+  // 同一个虚拟人总是落在同一个区间点，不同虚拟人不同
+  let hash = 0
+  for (let i = 0; i < virtualUserId.length; i++) {
+    hash = ((hash << 5) - hash) + virtualUserId.charCodeAt(i)
+  }
+  const scatter = Math.abs(hash) % 100  // 0-99
+
+  // 根据基础风格和偏移量微调描述
+  const base = toneMap[toneStyle] || "自然交流"
+  if (scatter < 20) return base  // 完全一致 20%
+  if (scatter < 50) return base + "，偶尔使用反问和设问"  // 轻微偏移 30%
+  if (scatter < 75) return base + "，喜欢用短句和分段表达"  // 中度偏移 25%
+  if (scatter < 90) return base + "，喜欢用长句详细描述感受"  // 较强偏移 15%
+  // 10% 概率混入相邻风格元素
+  const neighbors = Object.values(toneMap).filter((t) => t !== base)
+  return base + "，偶尔" + neighbors[scatter % neighbors.length].slice(0, 8)
+}
+
 const roleDescMap: Record<string, string> = {
   owner: "业主", designer: "设计师", worker: "工长", company: "装修公司",
 }
@@ -117,7 +142,7 @@ function buildContextPrompt(user: VirtualUser, history: HistoryItem[], task: str
 - 年龄层：${user.age_group || "未知"}
 - ${roleDesc[user.role] || ""}
 - 兴趣标签：${user.interest_tags?.join(", ") || "无"}
-- 风格：${toneMap[user.tone_style] || "自然交流"}
+- 风格：${getToneScatter(user.id, user.tone_style)}
 - 发言频率：${user.speak_frequency === "active" ? "比较活跃" : user.speak_frequency === "normal" ? "一般" : "偶尔发言"}
 
 该用户最近发布的内容：
@@ -149,7 +174,7 @@ export async function generateArticle(user: VirtualUser, history: HistoryItem[])
 
   let cover_url = ""
 
-  if (_wanxiangEnabled) {
+  if (isWanxiangEnabled()) {
     const prompt = getImagePrompt("cover", json.style)
     const images = await generateImages(prompt)
     cover_url = images[0] || ""
@@ -183,7 +208,7 @@ export async function generateCase(user: VirtualUser, history: HistoryItem[]) {
 
   let images: string[] = []
 
-  if (_wanxiangEnabled && json.style) {
+  if (isWanxiangEnabled()) {
     const prompt = getImagePrompt("case", json.style)
     const result = await generateImages(prompt)
     images = result.length > 0 ? [...result, ...result, ...result, ...result, ...result].slice(0, 5) : []

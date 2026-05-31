@@ -24,12 +24,24 @@ export default function LoginPage() {
     setLoading(true)
 
     if (mode === "login") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) {
-        setError(error.message)
-      } else {
-        router.push("/")
-        router.refresh()
+      console.log("[Login] Attempting login via API for:", email)
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        })
+        const data = await res.json()
+        console.log("[Login] API response:", data)
+        if (data.error) {
+          setError(data.error)
+        } else {
+          console.log("[Login] Login success")
+          window.location.href = "/"
+        }
+      } catch (e: any) {
+        console.error("[Login] Fetch error:", e)
+        setError("网络错误，请稍后重试")
       }
     } else {
       const { error } = await supabase.auth.signUp({

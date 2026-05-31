@@ -1,5 +1,6 @@
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
+import { requireAdmin } from "@/lib/auth-guard"
 
 const supabase = createDirectClient()
 
@@ -20,6 +21,8 @@ const TOPICS = [
 
 // 手动创建文章（不需要AI）
 export async function PUT(req: Request) {
+  const guard = await requireAdmin()
+  if (guard) return guard
   const body = await req.json()
   const { title, summary, content, category } = body
 
@@ -31,6 +34,7 @@ export async function PUT(req: Request) {
     title,
     summary: summary || "",
     content,
+    ai_generated_content: content,
     category: category || "装修攻略",
     tags: [title.slice(0, 10)],
     is_published: true,
@@ -45,6 +49,8 @@ export async function PUT(req: Request) {
 
 // AI一键生成
 export async function POST() {
+  const guard = await requireAdmin()
+  if (guard) return guard
   const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)]
 
   const prompt = `你是一个专业的家居装修内容创作者。请写一篇关于"${topic}"的装修攻略文章。
@@ -100,6 +106,7 @@ export async function POST() {
       title,
       summary,
       content: body,
+      ai_generated_content: body,
       category: "装修攻略",
       tags: [topic.slice(0, 10)],
       is_published: true,

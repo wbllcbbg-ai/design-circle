@@ -16,8 +16,13 @@ export async function POST(req: Request) {
   const supabase = createDirectClient()
 
   if (action === "delete") {
-    const { error } = await supabase.from("virtual_users").delete().in("id", ids)
+    // 保护：原子化 DELETE 只删除无内容的虚拟人（避免 TOCTOU）
+    const { data: deleted, error } = await supabase.from("virtual_users").delete().in("id", ids).eq("content_count", 0).select()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    const skipped = ids.length - (deleted?.length || 0)
+    if (skipped > 0) {
+      return NextResponse.json({ error: `以下虚拟人已有内容，无法删除: ${skipped} 个（已删除 ${deleted?.length || 0} 个）` }, { status: 400 })
+    }
   } else {
     const isActive = action === "enable"
     const { error } = await supabase.from("virtual_users").update({ is_active: isActive }).in("id", ids)

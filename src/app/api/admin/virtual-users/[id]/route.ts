@@ -36,7 +36,11 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const { id } = await params
   const supabase = createDirectClient()
 
-  const { error } = await supabase.from("virtual_users").delete().eq("id", id)
+  // 软删除保护：原子化 DELETE 只删除无内容的虚拟人（避免 TOCTOU）
+  const { data: deleted, error } = await supabase.from("virtual_users").delete().eq("id", id).eq("content_count", 0).select()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!deleted?.length) {
+    return NextResponse.json({ error: "该虚拟人已有内容，请使用禁用功能代替删除" }, { status: 400 })
+  }
   return NextResponse.json({ success: true })
 }
