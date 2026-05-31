@@ -51,7 +51,10 @@ async function callAI(prompt: string, temperature = 0.7, maxTokens = 1024): Prom
   const key = getApiKey()
   if (!key) throw new Error("AI_API_KEY 未配置，请在后台管理 → AI 配置中设置")
 
-  const res = await fetch(`${AI_BASE_URL}/chat/completions`, {
+  const url = `${AI_BASE_URL}/chat/completions`
+  console.log(`[AI] key length: ${key.length}, model: ${AI_MODEL}, url: ${url}`)
+
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -65,7 +68,10 @@ async function callAI(prompt: string, temperature = 0.7, maxTokens = 1024): Prom
     }),
   })
 
-  if (!res.ok) throw new Error(`AI service error: ${res.status}`)
+  if (!res.ok) {
+    const body = await res.text().catch(() => "")
+    throw new Error(`AI service error: ${res.status} ${body.slice(0, 200)}`)
+  }
   const json = await res.json()
   return json.choices?.[0]?.message?.content || ""
 }
