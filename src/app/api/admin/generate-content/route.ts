@@ -9,17 +9,21 @@ export const dynamic = "force-dynamic"
 export const maxDuration = 120
 
 async function loadRuntimeConfig() {
-  const supabase = createDirectClient()
-  const { data } = await supabase.from("ai_config").select("key, value")
-  for (const row of data || []) {
-    if (row.key === "ai_api_key") setRuntimeAiKey(row.value)
-    if (row.key === "unsplash_key") setUnsplashKey(row.value)
-    if (row.key === "wanxiang_key") setWanxiangKey(row.value)
-  }
+  try {
+    const supabase = createDirectClient()
+    const { data } = await supabase.from("ai_config").select("key, value")
+    for (const row of data || []) {
+      if (row.key === "ai_api_key") setRuntimeAiKey(row.value)
+      if (row.key === "unsplash_key") setUnsplashKey(row.value)
+      if (row.key === "wanxiang_key") setWanxiangKey(row.value)
+    }
 
-  // 如果配置了通义万相 key 则启用 AI 生图
-  const wanxiangEntry = (data || []).find((r: any) => r.key === "wanxiang_key")
-  setWanxiangEnabled(!!wanxiangEntry?.value)
+    // 如果配置了通义万相 key 则启用 AI 生图
+    const wanxiangEntry = (data || []).find((r: any) => r.key === "wanxiang_key")
+    setWanxiangEnabled(!!wanxiangEntry?.value)
+  } catch (err) {
+    console.warn("loadRuntimeConfig failed, falling back to env vars:", err)
+  }
 }
 
 // 获取虚拟人最近的内容作为上下文
