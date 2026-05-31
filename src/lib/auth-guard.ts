@@ -4,18 +4,19 @@ import { NextResponse } from "next/server"
 
 /**
  * 要求用户已登录。
- * 未登录返回 401（Response），已登录返回 void。
+ * 未登录返回 401（Response），已登录返回 userId（string）。
  */
 export async function requireAuth(): Promise<any> {
   const userId = await getCurrentUserId()
   if (!userId) {
     return NextResponse.json({ error: "请先登录" }, { status: 401 })
   }
+  return userId
 }
 
 /**
  * 要求用户是 admin。
- * 未登录返回 401，非 admin 返回 403，已授权返回 void。
+ * 未登录返回 401，非 admin 返回 403，已授权返回 void（不返回 userId，调用方用 if(guard) 检查）。
  */
 export async function requireAdmin(): Promise<any> {
   const userId = await getCurrentUserId()
