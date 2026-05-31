@@ -3,8 +3,9 @@ import { NextResponse } from "next/server"
 
 const supabase = createDirectClient()
 
-const AI_BASE_URL = process.env.AI_BASE_URL || "http://127.0.0.1:8000/v1"
-const AI_MODEL = process.env.AI_MODEL || "Qwen3.6-27B"
+const AI_BASE_URL = process.env.AI_BASE_URL || "https://api.deepseek.com/v1"
+const AI_MODEL = process.env.AI_MODEL || "deepseek-chat"
+const AI_API_KEY = process.env.AI_API_KEY || ""
 
 const TOPICS = [
   "2025年最流行的客厅设计趋势",
@@ -63,7 +64,10 @@ export async function POST() {
   try {
     const res = await fetch(`${AI_BASE_URL}/chat/completions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(AI_API_KEY ? { Authorization: `Bearer ${AI_API_KEY}` } : {}),
+      },
       body: JSON.stringify({
         model: AI_MODEL,
         messages: [{ role: "user", content: prompt }],
@@ -73,7 +77,8 @@ export async function POST() {
     })
 
     if (!res.ok) {
-      return NextResponse.json({ error: `AI 服务连接失败 (${res.status})。请检查 AI 服务是否在运行。` }, { status: 502 })
+      const body = await res.text().catch(() => "").then(t => t.slice(0, 100))
+      return NextResponse.json({ error: `AI 服务连接失败 (${res.status}): ${body}` }, { status: 502 })
     }
 
     const json = await res.json()
