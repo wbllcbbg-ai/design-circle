@@ -4,19 +4,18 @@ import { NextResponse } from "next/server"
 
 /**
  * 要求用户已登录。
- * 未登录返回 401（Response），已登录返回 userId。
+ * 未登录返回 401（Response），已登录返回 void。
  */
 export async function requireAuth(): Promise<any> {
   const userId = await getCurrentUserId()
   if (!userId) {
     return NextResponse.json({ error: "请先登录" }, { status: 401 })
   }
-  return userId
 }
 
 /**
  * 要求用户是 admin。
- * 未登录返回 401，非 admin 返回 403，已授权返回 userId。
+ * 未登录返回 401，非 admin 返回 403，已授权返回 void。
  */
 export async function requireAdmin(): Promise<any> {
   const userId = await getCurrentUserId()
@@ -34,6 +33,4 @@ export async function requireAdmin(): Promise<any> {
   if (user?.role !== "admin") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 })
   }
-
-  return userId
 }
