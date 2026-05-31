@@ -18,7 +18,7 @@ export async function requireAuth(): Promise<string | NextResponse> {
  * 要求用户是 admin。
  * 未登录返回 401，非 admin 返回 403，已授权返回 userId。
  */
-export async function requireAdmin(): Promise<string | NextResponse> {
+export async function requireAdmin() {
   const userId = await getCurrentUserId()
   if (!userId) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 })

@@ -4,10 +4,14 @@ import { requireAdmin } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
+function isGuardResponse(v: string | NextResponse): v is NextResponse {
+  return typeof v !== "string"
+}
+
 // GET — 获取所有 AI 配置
 export async function GET() {
   const guard = await requireAdmin()
-  if (guard) return guard
+  if (isGuardResponse(guard)) return guard
 
   const supabase = createDirectClient()
   const { data } = await supabase.from("ai_config").select("key, value, updated_at")
@@ -21,7 +25,7 @@ export async function GET() {
 // PUT — 更新 AI 配置
 export async function PUT(req: Request) {
   const guard = await requireAdmin()
-  if (guard) return guard
+  if (isGuardResponse(guard)) return guard
 
   const body = await req.json()
   const { updates } = body // { "ai_api_key": "sk-xxx", "unsplash_key": "xxx" }
