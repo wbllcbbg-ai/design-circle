@@ -1,4 +1,11 @@
 import { searchImages, getSearchQuery } from "./unsplash"
+import { generateImages, getImagePrompt, setWanxiangKey } from "./wanxiang"
+
+let _wanxiangEnabled = false
+
+export function setWanxiangEnabled(enabled: boolean) {
+  _wanxiangEnabled = enabled
+}
 
 const AI_BASE_URL = process.env.AI_BASE_URL || "https://api.deepseek.com/v1"
 const AI_MODEL = process.env.AI_MODEL || "deepseek-chat"
@@ -134,14 +141,25 @@ export async function generateArticle(user: VirtualUser, history: HistoryItem[])
   const raw = await callAI(prompt, 0.8, 2048)
   const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}")
 
-  const imageQuery = getSearchQuery("article")
-  const images = await searchImages(imageQuery)
+  let cover_url = ""
+
+  if (_wanxiangEnabled) {
+    const prompt = getImagePrompt("cover", json.style)
+    const images = await generateImages(prompt)
+    cover_url = images[0] || ""
+  }
+
+  if (!cover_url) {
+    const imageQuery = getSearchQuery("article")
+    const images = await searchImages(imageQuery)
+    cover_url = images[0] || ""
+  }
 
   return {
     title: json.title || "重庆装修攻略",
     summary: json.summary || "",
     content: json.content || "",
-    cover_url: images[0] || "",
+    cover_url,
   }
 }
 
@@ -157,7 +175,17 @@ export async function generateCase(user: VirtualUser, history: HistoryItem[]) {
   const raw = await callAI(prompt, 0.8, 1024)
   const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}")
 
-  const images = await searchImages(getSearchQuery("case"), 5)
+  let images: string[] = []
+
+  if (_wanxiangEnabled && json.style) {
+    const prompt = getImagePrompt("case", json.style)
+    const result = await generateImages(prompt)
+    images = result.length > 0 ? [...result, ...result, ...result, ...result, ...result].slice(0, 5) : []
+  }
+
+  if (images.length === 0) {
+    images = await searchImages(getSearchQuery("case"), 5)
+  }
 
   return {
     title: json.title || "重庆装修案例",

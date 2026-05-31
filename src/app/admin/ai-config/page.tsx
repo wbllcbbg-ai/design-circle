@@ -36,7 +36,8 @@ export default function AiConfigPage() {
 
   const fields = [
     { key: "ai_api_key", label: "DeepSeek API Key", placeholder: "sk-xxxxxxxxxxxxxxxx", type: "password" },
-    { key: "unsplash_key", label: "Unsplash Access Key", placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", type: "text" },
+    { key: "wanxiang_key", label: "通义万相 API Key（用于 AI 生图）", placeholder: "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", type: "password" },
+    { key: "unsplash_key", label: "Unsplash Access Key（备用配图）", placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", type: "text" },
   ]
 
   if (loading) return <div className="flex items-center justify-center py-10 text-sm text-zinc-400">加载中...</div>
@@ -78,8 +79,9 @@ export default function AiConfigPage() {
             <strong>说明：</strong>配置保存后立即生效，无需重启服务。
           </p>
           <ul className="mt-2 space-y-1 text-[10px] text-zinc-400 list-disc list-inside">
-            <li>DeepSeek Key — 用于 AI 内容生成（虚拟用户昵称生成、文章、评论、评价等）</li>
-            <li>Unsplash Key — 用于内容配图（可选，不配会使用占位图）</li>
+            <li>DeepSeek Key — 用于 AI 内容生成（文章、评论、评价等文本内容）</li>
+            <li>通义万相 Key — 用于 AI 生图（案例封面、文章配图），配置后自动启用，否则用 Unsplash 或占位图</li>
+            <li>Unsplash Key — 备用配图（通义万相关闭或失败时会回退到 Unsplash）</li>
             <li>Key 存储在数据库中，优先级高于环境变量</li>
           </ul>
         </div>

@@ -1,7 +1,8 @@
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
-import { generateArticle, generateCase, generateQuestion, generateComment, generateReview, setRuntimeAiKey } from "@/lib/ai-generator"
+import { generateArticle, generateCase, generateQuestion, generateComment, generateReview, setRuntimeAiKey, setWanxiangEnabled } from "@/lib/ai-generator"
 import { setUnsplashKey } from "@/lib/unsplash"
+import { setWanxiangKey } from "@/lib/wanxiang"
 import { requireAdmin } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
@@ -13,7 +14,12 @@ async function loadRuntimeConfig() {
   for (const row of data || []) {
     if (row.key === "ai_api_key") setRuntimeAiKey(row.value)
     if (row.key === "unsplash_key") setUnsplashKey(row.value)
+    if (row.key === "wanxiang_key") setWanxiangKey(row.value)
   }
+
+  // 如果配置了通义万相 key 则启用 AI 生图
+  const wanxiangEntry = (data || []).find((r: any) => r.key === "wanxiang_key")
+  setWanxiangEnabled(!!wanxiangEntry?.value)
 }
 
 // 获取虚拟人最近的内容作为上下文
