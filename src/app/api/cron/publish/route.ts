@@ -10,11 +10,12 @@ export const maxDuration = 60
 export async function GET(req: Request) {
   // CRON_SECRET 校验
   const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    const authHeader = req.headers.get("authorization") || ""
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 })
-    }
+  if (!cronSecret) {
+    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 })
+  }
+  const authHeader = req.headers.get("authorization") || ""
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 })
   }
 
   const supabase = createDirectClient()

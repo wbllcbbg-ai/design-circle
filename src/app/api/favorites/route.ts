@@ -87,6 +87,7 @@ export async function PUT(req: Request) {
 
   const supabase = createDirectClient()
 
+  // 收藏列表需要关联目标实体获取标题和封面
   const { data } = await supabase
     .from("favorites")
     .select("target_id, created_at")
@@ -94,5 +95,35 @@ export async function PUT(req: Request) {
     .eq("target_type", target_type)
     .order("created_at", { ascending: false })
 
-  return NextResponse.json({ favorites: data ?? [] })
+  if (!data || data.length === 0) {
+    return NextResponse.json({ favorites: [] })
+  }
+
+  // 根据 target_type 查询对应的表获取标题和封面
+  let items: any[] = []
+  if (target_type === "case") {
+    const ids = data.map((f: any) => f.target_id)
+    const { data: cases } = await supabase
+      .from("cases")
+      .select("id, title, cover_url, style, area")
+      .in("id", ids)
+    const caseMap = new Map((cases || []).map((c: any) => [c.id, c]))
+    items = data.map((f: any) => ({
+      ...f,
+      target: caseMap.get(f.target_id) || null,
+    }))
+  } else if (target_type === "article") {
+    const ids = data.map((f: any) => f.target_id)
+    const { data: articles } = await supabase
+      .from("articles")
+      .select("id, title, cover_url, category")
+      .in("id", ids)
+    const articleMap = new Map((articles || []).map((a: any) => [a.id, a]))
+    items = data.map((f: any) => ({
+      ...f,
+      target: articleMap.get(f.target_id) || null,
+    }))
+  }
+
+  return NextResponse.json({ favorites: items })
 }

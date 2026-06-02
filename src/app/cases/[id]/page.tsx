@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { use } from "react"
+import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { getCover } from "@/lib/images"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ShareButton } from "@/components/ui/share-button"
+import { getRoleLabel } from "@/lib/types"
 
 type Comment = {
   id: string
@@ -61,7 +64,9 @@ export default function CaseDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
+  const router = useRouter()
   const [data, setData] = useState<any>(null)
+  const [designerData, setDesignerData] = useState<any>(null)
   const [comments, setComments] = useState<Comment[]>([])
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
@@ -83,6 +88,7 @@ export default function CaseDetailPage({
       fetch(`/api/cases/${id}/reviews`).then((r) => r.json()),
     ])
     setData(caseRes.case)
+    setDesignerData(caseRes.designer)
     setComments(commentRes.comments ?? [])
     setReviews(reviewRes.reviews ?? [])
     setUser(userRes.data.user)
@@ -165,32 +171,49 @@ export default function CaseDetailPage({
   return (
     <div className="bg-white dark:bg-zinc-900 min-h-screen">
       <div className="w-full aspect-[4/5] relative overflow-hidden bg-zinc-100 dark:bg-zinc-800">
-        <img
+        <Image
           src={
             (data.cover_url && !data.cover_url.includes("placehold.co")) ? data.cover_url
             : data.images?.find((u: string) => u && !u.includes("placehold.co"))
             || getCover(0)
           }
           alt={data.title}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none"
-          }}
+          fill
+          className="object-cover"
+          sizes="100vw"
+          priority
         />
-        <Link href="/" className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur flex items-center justify-center">
+        <button onClick={() => { if (window.history.length > 1) router.back(); else router.push("/cases") }} className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur flex items-center justify-center">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="m15 18-6-6 6-6" />
           </svg>
-        </Link>
+        </button>
       </div>
 
       <div className="px-4 pt-4 pb-6">
         <h1 className="text-lg font-semibold leading-snug">{data.title}</h1>
-        <div className="flex items-center gap-1.5 mt-1.5">
-          <div className="w-4 h-4 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-          <span className="text-xs text-zinc-400">设计师</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500">设计师</span>
-          <span className="text-xs text-zinc-300">·</span>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2">
+          {designerData ? (
+            <>
+              <Link href={`/designers/${designerData.id}`} className="flex items-center gap-1.5 shrink-0">
+                <span className="w-5 h-5 rounded-full bg-gradient-to-br from-zinc-400 to-zinc-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                  {designerData.name[0]}
+                </span>
+                <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors">
+                  {designerData.name}
+                </span>
+                {designerData.is_verified && (
+                  <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-500 leading-none">认证</span>
+                )}
+              </Link>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 leading-none">
+                {getRoleLabel(designerData.role || designerData.type)}
+              </span>
+              <span className="text-xs text-zinc-300">·</span>
+            </>
+          ) : (
+            <span className="text-xs text-zinc-400">设计师</span>
+          )}
           <span className="text-xs text-zinc-400">{data.style} · {data.area}㎡</span>
         </div>
 

@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { use } from "react"
+import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { ShareButton } from "@/components/ui/share-button"
 
@@ -21,8 +23,8 @@ type Article = {
     id: string
     nickname: string
     avatar_url: string | null
-    designer_type: string | null
-    is_verified_designer: boolean
+    role: string | null
+    designer_id: string | null
   }
 }
 
@@ -34,7 +36,8 @@ type Comment = {
   user_id: string
 }
 
-const USER_TYPE_MAP: Record<string, string> = { designer: "设计师", company: "公司", worker: "工长" }
+import { getRoleLabel } from "@/lib/types"
+
 
 export default function ArticleDetailPage({
   params,
@@ -42,6 +45,7 @@ export default function ArticleDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
+  const router = useRouter()
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
@@ -135,16 +139,16 @@ export default function ArticleDetailPage({
     <article className="bg-white dark:bg-zinc-900 min-h-screen">
       <div className="w-full aspect-[4/3] relative bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
         {article.cover_url ? (
-          <img src={article.cover_url} alt={article.title} className="w-full h-full object-cover" />
+          <Image src={article.cover_url} alt={article.title} fill className="object-cover" sizes="100vw" priority />
         ) : (
           <div className="w-full h-full" style={{ background: "linear-gradient(135deg, hsl(230, 30%, 70%), hsl(180, 25%, 60%))" }} />
         )}
       
-        <Link href="/articles" className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur flex items-center justify-center">
+        <button onClick={() => { if (window.history.length > 1) router.back(); else router.push("/articles") }} className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur flex items-center justify-center">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="m15 18-6-6 6-6" />
           </svg>
-        </Link>
+        </button>
         <div className="absolute top-4 right-4 px-2 py-0.5 bg-white/90 dark:bg-zinc-900/90 backdrop-blur rounded text-[11px] font-medium text-zinc-700 dark:text-zinc-300">{article.category}</div>
       </div>
 
@@ -153,10 +157,10 @@ export default function ArticleDetailPage({
         <div className="flex items-center gap-2 mt-1.5">
           {article.author && (
             <>
-              <Link href={`/users/${article.author.id}`}>
+              <Link href={article.author.designer_id ? `/designers/${article.author.designer_id}` : `/users/${article.author.id}`}>
                 <div className="w-5 h-5 rounded-full bg-zinc-300 dark:bg-zinc-600 overflow-hidden flex-shrink-0 hover:opacity-80">
                   {article.author.avatar_url ? (
-                    <img src={article.author.avatar_url} alt={article.author.nickname} className="w-full h-full object-cover" />
+                    <Image src={article.author.avatar_url} alt={article.author.nickname} fill className="object-cover" sizes="20px" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-[10px] text-white font-medium">
                       {article.author.nickname?.charAt(0) || "?"}
@@ -164,12 +168,9 @@ export default function ArticleDetailPage({
                   )}
                 </div>
               </Link>
-              <Link href={`/users/${article.author.id}`} className="text-xs text-zinc-500 font-medium hover:text-zinc-700 dark:hover:text-zinc-300">{article.author.nickname}</Link>
-              {article.author.designer_type && (
-                <span className="text-[9px] px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-400">{USER_TYPE_MAP[article.author.designer_type] || article.author.designer_type}</span>
-              )}
-              {!article.author.designer_type && (
-                <span className="text-[9px] px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-400">业主</span>
+              <Link href={article.author.designer_id ? `/designers/${article.author.designer_id}` : `/users/${article.author.id}`} className="text-xs text-zinc-500 font-medium hover:text-zinc-700 dark:hover:text-zinc-300">{article.author.nickname}</Link>
+              {article.author.role && (
+                <span className="text-[9px] px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-400">{getRoleLabel(article.author.role)}</span>
               )}
               <span className="text-zinc-300 dark:text-zinc-600">·</span>
             </>

@@ -22,6 +22,21 @@ export interface User {
 // 设计师/装修公司
 export type DesignerType = "designer" | "company" | "worker"
 
+// 身份标签字典 — 数据库存英文，显示层转中文
+export const ROLE_LABELS: Record<string, string> = {
+  designer: "设计师",
+  company: "装修公司",
+  worker: "工长",
+  homeowner: "业主",
+  supplier: "材料商",
+  editor: "编辑",
+}
+
+export function getRoleLabel(type: string | null | undefined): string {
+  if (!type) return ""
+  return ROLE_LABELS[type] || type
+}
+
 export interface Designer {
   id: string
   user_id: string
@@ -93,6 +108,29 @@ export interface Article {
   like_count: number
   published_at: string
   created_at: string
+}
+
+// 首页 Feed 流
+export type DesignerInfo = {
+  id: string
+  name: string
+  type: string
+  user_id: string
+}
+
+export type FeedItem = {
+  type: "case" | "article"
+  id: string
+  title: string
+  likes: number
+  style: string
+  area: number
+  category: string
+  imgIndex: number
+  coverUrl: string | null
+  firstImage: string | null
+  designer_id: string | null
+  designer: DesignerInfo | null
 }
 
 // 设计师入驻申请

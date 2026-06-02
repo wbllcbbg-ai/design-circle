@@ -4,6 +4,7 @@ import { generateArticle, generateCase, generateQuestion, generateComment, gener
 import { setUnsplashKey } from "@/lib/unsplash"
 import { setWanxiangKey } from "@/lib/wanxiang"
 import { requireAdmin } from "@/lib/auth-guard"
+import { schedulePublishTime as scheduleV1, type ScheduleConfig } from "@/lib/content-scheduler"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 120
@@ -60,40 +61,12 @@ async function getVirtualUserHistory(supabase: any, virtualUserId: string, limit
   return items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, limit)
 }
 
-// 调度时间计算
-function schedulePublishTime(strategy: string, user: any): string {
-  const now = new Date()
-
-  if (strategy === "init") {
-    const daysAgo = Math.floor(Math.random() * 30)
-    const hours = Math.floor(Math.random() * 12) + 8
-    const date = new Date(now.getTime() - daysAgo * 86400000)
-    date.setHours(hours, Math.floor(Math.random() * 60), 0, 0)
-    return date.toISOString()
-  }
-
-  const hasNight = user.active_periods?.includes("晚上")
-  const hasAfternoon = user.active_periods?.includes("下午")
-  const hasMorning = user.active_periods?.includes("早上")
-
-  let hour: number
-  if (hasNight && Math.random() > 0.5) {
-    hour = 19 + Math.floor(Math.random() * 4)
-  } else if (hasAfternoon) {
-    hour = 13 + Math.floor(Math.random() * 4)
-  } else if (hasMorning) {
-    hour = 8 + Math.floor(Math.random() * 2)
-  } else {
-    hour = 10 + Math.floor(Math.random() * 10)
-  }
-
-  const d = new Date(now)
-  // 如果算出的 hour 已过，推到明天同一小时
-  if (hour <= d.getHours()) {
-    d.setDate(d.getDate() + 1)
-  }
-  d.setHours(hour, Math.floor(Math.random() * 60), 0, 0)
-  return d.toISOString()
+// 调度时间计算（使用共享模块，兼容旧调用方式）
+// strategy 参数保留但不再使用；共享模块使用默认 slots 配置
+const defaultScheduleConfig: ScheduleConfig = {
+  slots: ["08-12", "14-18", "19-22"],
+  slot_max: 4,
+  interval_hours: 6,
 }
 
 export async function POST(req: Request) {
@@ -104,7 +77,7 @@ export async function POST(req: Request) {
   await loadRuntimeConfig()
 
   const body = await req.json()
-  const { strategy = "daily", types = ["article", "comment"] } = body
+  const { strategy = "daily", types = ["article", "comment"], count = 10 } = body
 
   const supabase = createDirectClient()
 
@@ -124,29 +97,33 @@ export async function POST(req: Request) {
   // 文章
   if (types.includes("article")) {
     const designers = virtualUsers.filter(u => u.role === "designer")
-    const count = Math.min(designers.length, 5)
-    for (let i = 0; i < count; i++) {
+    const articleGenCount = Math.min(designers.length, count)
+    for (let i = 0; i < articleGenCount; i++) {
       const user = designers[i]
       try {
         const history = await getVirtualUserHistory(supabase, user.id)
         const article = await generateArticle(user, history)
+        if (!article.content?.trim() || !article.title?.trim()) {
+          results.push({ type: "article", title: article.title, error: "生成内容为空，跳过入库" })
+          continue
+        }
         const { data: dbResult } = await supabase.from("articles").insert({
           title: article.title,
           summary: article.summary,
           content: article.content,
           category: "装修攻略",
-          tags: [article.title.slice(0, 10), "重庆装修"],
+          tags: [article.summary?.slice(0, 8) || "装修攻略", "重庆装修"],
           cover_url: article.cover_url,
           is_published: true,
           author_id: user.user_id,
           virtual_user_id: user.id,
-          published_at: schedulePublishTime(strategy, user),
+          published_at: await scheduleV1(supabase, defaultScheduleConfig, user.id),
           view_count: Math.floor(Math.random() * 200) + 10,
           like_count: Math.floor(Math.random() * 30),
         }).select().single()
         results.push({ type: "article", title: article.title, id: dbResult?.id })
         totalGenerated++
-        await supabase.from("virtual_users").update({ last_active_at: new Date().toISOString() }).eq("id", user.id)
+        await supabase.rpc("increment_vu_content", { p_id: user.id })
       } catch (err: any) {
         results.push({ type: "article", error: err.message })
       }
@@ -156,8 +133,8 @@ export async function POST(req: Request) {
   // 案例
   if (types.includes("case")) {
     const virtualDesigners = virtualUsers.filter(u => u.role === "designer")
-    const count = Math.min(virtualDesigners.length, 3)
-    for (let i = 0; i < count; i++) {
+    const caseGenCount = Math.min(virtualDesigners.length, count)
+    for (let i = 0; i < caseGenCount; i++) {
       const user = virtualDesigners[i]
       // 查找该虚拟用户对应的 designers 表记录
       const { data: designerRecord } = await supabase
@@ -174,6 +151,10 @@ export async function POST(req: Request) {
       try {
         const history = await getVirtualUserHistory(supabase, user.id)
         const caseItem = await generateCase(user, history)
+        if (!caseItem.description?.trim() || !caseItem.title?.trim()) {
+          results.push({ type: "case", title: caseItem.title, error: "生成内容为空，跳过入库" })
+          continue
+        }
         const { data: dbResult } = await supabase.from("cases").insert({
           is_published: true,
           title: caseItem.title,
@@ -184,11 +165,14 @@ export async function POST(req: Request) {
           images: caseItem.images,
           designer_id: designerRecord.id,
           virtual_user_id: user.id,
-          published_at: schedulePublishTime(strategy, user),
+          published_at: await scheduleV1(supabase, defaultScheduleConfig, user.id),
           view_count: Math.floor(Math.random() * 500) + 20,
         }).select().single()
         results.push({ type: "case", title: caseItem.title, id: dbResult?.id })
         totalGenerated++
+        // 更新设计师案例计数（先查当前值再 +1）
+        const { data: cur } = await supabase.from("designers").select("case_count").eq("id", designerRecord.id).single()
+        await supabase.from("designers").update({ case_count: (cur?.case_count ?? 0) + 1 }).eq("id", designerRecord.id)
       } catch (err: any) {
         results.push({ type: "case", error: err.message })
       }
@@ -198,8 +182,8 @@ export async function POST(req: Request) {
   // 提问
   if (types.includes("question")) {
     const owners = virtualUsers.filter(u => u.role === "owner")
-    const count = Math.min(owners.length, 3)
-    for (let i = 0; i < count; i++) {
+    const questionGenCount = Math.min(owners.length, count)
+    for (let i = 0; i < questionGenCount; i++) {
       const user = owners[i]
       try {
         const history = await getVirtualUserHistory(supabase, user.id)
@@ -210,7 +194,7 @@ export async function POST(req: Request) {
           content: question.content,
           category: question.category,
           virtual_user_id: user.id,
-          created_at: schedulePublishTime(strategy, user),
+          created_at: await scheduleV1(supabase, defaultScheduleConfig, user.id),
         }).select().single()
         results.push({ type: "question", title: question.title, id: dbResult?.id })
         totalGenerated++
@@ -234,8 +218,8 @@ export async function POST(req: Request) {
     if (targets.length === 0) {
       results.push({ type: "comment", error: "无可评论的新内容（所有内容已关联虚拟人）" })
     } else {
-      const count = Math.min(virtualUsers.length, targets.length, 8)
-      for (let i = 0; i < count; i++) {
+      const commentGenCount = Math.min(virtualUsers.length, targets.length, count)
+      for (let i = 0; i < commentGenCount; i++) {
       const user = virtualUsers[i]
       const target = targets[i % targets.length]
       try {
@@ -247,7 +231,7 @@ export async function POST(req: Request) {
           user_id: user.user_id,
           content: comment.content,
           virtual_user_id: user.id,
-          created_at: schedulePublishTime(strategy, user),
+          created_at: await scheduleV1(supabase, defaultScheduleConfig, user.id),
         }).select().single()
         results.push({ type: "comment", target: target.title, id: dbResult?.id })
         totalGenerated++
@@ -262,9 +246,9 @@ export async function POST(req: Request) {
   if (types.includes("review")) {
     const { data: designers } = await supabase.from("designers").select("id, name").limit(10)
     const owners = virtualUsers.filter(u => u.role === "owner")
-    const count = Math.min(owners.length, designers?.length || 0, 5)
+    const reviewGenCount = Math.min(owners.length, designers?.length || 0, count)
 
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < reviewGenCount; i++) {
       const user = owners[i % owners.length]
       const designer = designers![i % designers!.length]
       try {
@@ -282,7 +266,7 @@ export async function POST(req: Request) {
           review_status: "approved",
           review_source: "browse",
           virtual_user_id: user.id,
-          created_at: schedulePublishTime(strategy, user),
+          created_at: await scheduleV1(supabase, defaultScheduleConfig, user.id),
         }).select().single()
         results.push({ type: "review", designer: designer.name, id: dbResult?.id })
         totalGenerated++

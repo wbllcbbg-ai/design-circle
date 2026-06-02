@@ -9,21 +9,22 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { data: article } = await supabase
     .from("articles")
-    .select("*, author:users(id, nickname, avatar_url)")
+    .select("*, author:users(id, nickname, avatar_url, role)")
     .eq("id", id)
     .single()
+
+  if (!article) return NextResponse.json({ error: "文章不存在" }, { status: 404 })
 
   // 获取作者的设计师身份
   if (article?.author_id) {
     const { data: designer } = await supabase
       .from("designers")
-      .select("type, is_verified")
+      .select("id")
       .eq("user_id", article.author_id)
-      .single()
+      .maybeSingle()
     article.author = {
       ...article.author,
-      designer_type: designer?.type ?? null,
-      is_verified_designer: designer?.is_verified ?? false,
+      designer_id: designer?.id ?? null,
     }
   }
 

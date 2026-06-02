@@ -1,5 +1,11 @@
 {
   "buildCommand": "npx next build --webpack",
   "installCommand": "npm install",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/admin/eco/strategy/run",
+      "schedule": "0 8 * * *"
+    }
+  ]
 }

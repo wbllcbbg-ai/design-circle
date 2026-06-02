@@ -136,8 +136,8 @@ export default function ProfilePage() {
           {/* 菜单 */}
           <div className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
             {[
-              { icon: "⭐", label: "我的点评", href: "#" },
-              { icon: "❤️", label: "我的收藏", href: "#" },
+              { icon: "⭐", label: "我的点评", href: "/profile/reviews" },
+              { icon: "❤️", label: "我的收藏", href: "/profile/favorites" },
               { icon: "👁️", label: "浏览历史", href: "/profile/history" },
               { icon: "📢", label: "邀请好友", href: "/invite" },
               { icon: "📊", label: "设计师工作台", href: "/dashboard" },

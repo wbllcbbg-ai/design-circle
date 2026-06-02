@@ -63,6 +63,8 @@ export async function PUT(req: Request) {
       city_id: app.city_id,
       is_verified: true,
     })
+    // 同步更新 users.role
+    await supabase.from("users").update({ role: app.type }).eq("id", app.user_id)
   }
 
   const { data, error } = await supabase.from("designer_applications").update({ status }).eq("id", id).select().single()

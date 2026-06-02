@@ -42,6 +42,11 @@ type VirtualUser = {
   tone_style: string
   speak_frequency: string
   specialty: string | null
+  content_profile?: {
+    topics?: string[]
+    style?: string
+    interactions?: { nickname: string; count: number }[]
+  }
 }
 
 type HistoryItem = {
@@ -57,8 +62,6 @@ async function callAI(prompt: string, temperature = 0.7, maxTokens = 1024): Prom
   if (!key) throw new Error("AI_API_KEY 未配置，请在后台管理 → AI 配置中设置")
 
   const url = `${AI_BASE_URL}/chat/completions`
-  console.log(`[AI] key length: ${key.length}, model: ${AI_MODEL}, url: ${url}`)
-
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -154,6 +157,8 @@ ${historyBlock || "  （暂无历史内容）"}
 1. 内容要符合该用户的身份和风格
 2. 如果有历史内容，要自然地延续之前的逻辑
 3. 不要重复使用相同的开头句式
+${user.content_profile?.topics?.length ? `4. 该用户擅长的话题：${user.content_profile.topics.join("、")}` : ""}
+${user.content_profile?.style ? `5. 该用户偏好的表达风格：${user.content_profile.style}` : ""}
 ${user.tone_style !== "professional" ? "4. 使用自然的口语化表达" : ""}
 ${user.role === "owner" ? "5. 内容围绕重庆本地装修场景" : ""}`
 }
@@ -162,7 +167,17 @@ ${user.role === "owner" ? "5. 内容围绕重庆本地装修场景" : ""}`
 
 export async function generateArticle(user: VirtualUser, history: HistoryItem[]) {
   const prompt = buildContextPrompt(user, history,
-    `请以该用户的身份写一篇重庆本地装修攻略文章，主题可以是户型改造、材料选择、风格搭配、预算控制等。
+    `请以该用户的身份写一篇重庆本地装修攻略文章。主题从以下列表中随机选择一种，不要每次都选同一个：
+1. 预算控制/省钱技巧
+2. 风格搭配指南（日式/北欧/轻奢/新中式/混搭/工业风等，不要只写轻奢）
+3. 材料选购攻略（瓷砖/地板/乳胶漆/橱柜等）
+4. 施工避坑经验（水电/防水/泥瓦等）
+5. 老房翻新全记录
+6. 收纳设计原则
+7. 灯光设计技巧
+8. 不同户型的改造方案
+9. 环保与甲醛治理
+10. 装修时间线与流程管理
 返回 JSON 格式：{"title": "...", "summary": "...", "content": "..."}
 - 标题要吸引人，包含关键词
 - 正文 500-800 字，专业实用
@@ -196,9 +211,10 @@ export async function generateArticle(user: VirtualUser, history: HistoryItem[])
 
 export async function generateCase(user: VirtualUser, history: HistoryItem[]) {
   const prompt = buildContextPrompt(user, history,
-    `请以该设计师的身份发布一个重庆本地的装修案例。
+    `请以该设计师的身份发布一个重庆本地的装修案例。风格从以下随机选择，不要每次都选轻奢：
+现代简约、日式、北欧、轻奢、新中式、混搭、工业风
 返回 JSON 格式：{"title": "...", "style": "...", "area": 80, "budget": 150000, "description": "..."}
-- style 可选：现代简约/日式/北欧/轻奢/新中式/混搭
+- style 从上面随机选一个
 - area 60-200 平米
 - budget 5-50 万`
   )
@@ -210,8 +226,8 @@ export async function generateCase(user: VirtualUser, history: HistoryItem[]) {
 
   if (isWanxiangEnabled()) {
     const prompt = getImagePrompt("case", json.style)
-    const result = await generateImages(prompt)
-    images = result.length > 0 ? [...result, ...result, ...result, ...result, ...result].slice(0, 5) : []
+    const result = await generateImages(prompt, 4)
+    images = result.length > 0 ? result.slice(0, 4) : []
   }
 
   if (images.length === 0) {

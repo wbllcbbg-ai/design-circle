@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { getRoleLabel } from "@/lib/types"
 import Link from "next/link"
 
 export default function ApplyPage() {
@@ -66,23 +67,22 @@ export default function ApplyPage() {
         <div>
           <p className="text-sm font-medium mb-2">申请类型 *</p>
           <div className="flex gap-2">
-            {[
-              { value: "designer", label: "设计师" },
-              { value: "company", label: "装修公司" },
-              { value: "worker", label: "工长" },
-            ].map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setForm({ ...form, type: opt.value })}
-                className={`flex-1 py-2.5 rounded-full text-sm font-medium ${
-                  form.type === opt.value
-                    ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+            {["designer", "company", "worker"].map((value) => {
+              const label = getRoleLabel(value)
+              return (
+                <button
+                  key={value}
+                  onClick={() => setForm({ ...form, type: value })}
+                  className={`flex-1 py-2.5 rounded-full text-sm font-medium ${
+                    form.type === value
+                      ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                      : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                  }`}
+                >
+                  {label}
+                </button>
+              )
+            })}
           </div>
         </div>
 

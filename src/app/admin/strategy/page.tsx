@@ -154,7 +154,7 @@ export default function StrategyPage() {
                     checked={checked}
                     onChange={() => {
                       const key = ["08-12", "14-18", "19-22"][i]
-                      const next = checked ? slots.filter((s) => s !== key) : [...slots, key]
+                      const next = checked ? slots.filter((s: string) => s !== key) : [...slots, key]
                       updateConfig("publish_rhythm", "slots", next)
                     }}
                     className="rounded"
@@ -412,7 +412,7 @@ export default function StrategyPage() {
             {logs.map((log: any) => {
               const failedCount = Array.isArray(log.summary?.failed) ? log.summary.failed.length : 0
               const totalSuccess = log.summary?.succeeded
-                ? Object.values(log.summary.succeeded).reduce((a: number, b: any) => a + (typeof b === "number" ? b : 0), 0)
+                ? Number(Object.values(log.summary.succeeded).reduce((a: any, b: any) => a + (typeof b === "number" ? b : 0), 0))
                 : 0
               return (
                 <div key={log.id} className="flex items-center justify-between px-3 py-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg text-xs">

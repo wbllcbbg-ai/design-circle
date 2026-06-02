@@ -1,9 +1,11 @@
-"use client"
-
-import { useEffect, useState } from "react"
+import { createDirectClient } from "@/lib/supabase/client"
+import { HomeFeed } from "@/components/home/HomeFeed"
+import { Search, Building2, Eye, Palette, ListTodo } from "lucide-react"
 import Link from "next/link"
-import { getCover, getArticleCover } from "@/lib/images"
-import { CaseCardSkeleton } from "@/components/ui/skeleton"
+import type { FeedItem } from "@/lib/types"
+
+export const dynamic = "force-dynamic"
+
 
 type FeedItem = {
   type: "case" | "article"
@@ -16,116 +18,120 @@ type FeedItem = {
   imgIndex: number
   coverUrl: string | null
   firstImage: string | null
+  designer_id: string | null
+  designer: DesignerInfo | null
 }
 
-export default function HomePage() {
-  const [items, setItems] = useState<FeedItem[]>([])
-  const [activeTab, setActiveTab] = useState("为你推荐")
+const FUNC_ENTRIES = [
+  { label: "整屋案例", to: "/cases", icon: Building2 },
+  { label: "找灵感", to: "/cases", icon: Eye },
+  { label: "找设计师", to: "/designers", icon: Palette },
+  { label: "好物清单", to: "/articles", icon: ListTodo },
+]
 
-  useEffect(() => {
-    fetch("/api/feed")
-      .then((r) => r.json())
-      .then((data) => {
-        const feed: FeedItem[] = [
-          ...(data.cases ?? []).map((c: any, i: number) => ({
-            type: "case" as const,
-            id: c.id,
-            title: c.title,
-            likes: c.like_count,
-            style: c.style,
-            area: c.area,
-            category: "整屋案例",
-            imgIndex: i,
-            coverUrl: c.cover_url || null,
-            firstImage: c.images?.[0] || null,
-          })),
-          ...(data.articles ?? []).map((a: any, i: number) => ({
-            type: "article" as const,
-            id: a.id,
-            title: a.title,
-            likes: a.like_count,
-            style: a.category,
-            area: 0,
-            category: "装修攻略",
-            imgIndex: i + 10,
-            coverUrl: a.cover_url || null,
-            firstImage: null,
-          })),
-        ]
-        feed.sort((a, b) => b.likes - a.likes)
-        setItems(feed)
-      })
-  }, [])
+async function getInitialFeed(): Promise<{ items: FeedItem[]; hasMore: boolean }> {
+  try {
+    const supabase = createDirectClient()
+    const [casesRes, articlesRes] = await Promise.all([
+      supabase
+        .from("cases")
+        .select("id, title, style, area, cover_url, images, like_count, designer_id")
+        .eq("is_published", true)
+        .order("created_at", { ascending: false })
+        .range(0, 9),
+      supabase
+        .from("articles")
+        .select("id, title, category, cover_url, like_count, author_id")
+        .eq("is_published", true)
+        .order("created_at", { ascending: false })
+        .range(0, 9),
+    ])
 
-  const TABS = ["为你推荐", "整屋案例", "装修攻略", "设计师", "建材测评", "避坑指南"]
+    // 获取案例的设计师信息
+    const cases = casesRes.data ?? []
+    const designerIds = [...new Set(cases.map((c) => c.designer_id).filter(Boolean))] as string[]
+    let designerMap: Record<string, DesignerInfo> = {}
+    if (designerIds.length > 0) {
+      const { data: designers } = await supabase.from("designers").select("id, name, type, user_id").in("id", designerIds)
+      for (const d of designers ?? []) {
+        designerMap[d.id] = { id: d.id, name: d.name, type: d.type, user_id: d.user_id }
+      }
+    }
+
+    const items: FeedItem[] = [
+      ...cases.map((c, i) => ({
+        type: "case" as const,
+        id: c.id,
+        title: c.title,
+        likes: c.like_count,
+        style: c.style,
+        area: c.area,
+        category: "整屋",
+        imgIndex: i,
+        coverUrl: c.cover_url || null,
+        firstImage: c.images?.[0] || null,
+        designer_id: c.designer_id || null,
+        designer: c.designer_id && designerMap[c.designer_id] ? designerMap[c.designer_id] : null,
+      })),
+      ...(articlesRes.data ?? []).map((a, i) => ({
+        type: "article" as const,
+        id: a.id,
+        title: a.title,
+        likes: a.like_count,
+        style: a.category,
+        area: 0,
+        category: "攻略",
+        imgIndex: i + 10,
+        coverUrl: a.cover_url || null,
+        firstImage: null,
+        designer_id: null,
+        designer: null,
+      })),
+    ]
+    items.sort((a, b) => b.likes - a.likes)
+    const hasMore = cases.length >= 10 || (articlesRes.data?.length ?? 0) >= 10
+    return { items, hasMore }
+  } catch {
+    return { items: [], hasMore: false }
+  }
+}
+
+export default async function HomePage() {
+  const { items, hasMore } = await getInitialFeed()
 
   return (
-    <div className="max-w-lg mx-auto">
-      <div className="px-3 py-2.5 overflow-x-auto scrollbar-hide bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800">
-        <div className="flex gap-2">
-          {TABS.map((tag) => (
-            <button
-              key={tag}
-              onClick={() => setActiveTab(tag)}
-              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                tag === activeTab
-                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                  : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-              }`}
+    <div className="bg-surface min-h-screen pb-4">
+      {/* 搜索框 */}
+      <div className="px-4 pt-2.5 pb-1.5">
+        <Link
+          href="/search"
+          className="flex items-center gap-2.5 h-10 px-4 rounded-full bg-wash text-muted text-[13px]"
+        >
+          <Search size={15} />
+          <span>找设计师、案例或装修灵感…</span>
+        </Link>
+      </div>
+
+      {/* 功能入口 */}
+      <div className="flex justify-around px-2 py-2 border-b border-black/[0.03]">
+        {FUNC_ENTRIES.map((f) => {
+          const Icon = f.icon
+          return (
+            <Link
+              key={f.label}
+              href={f.to}
+              className="flex flex-col items-center gap-1.5 flex-1"
             >
-              {tag}
-            </button>
-          ))}
-        </div>
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-accent-light">
+                <Icon size={18} strokeWidth={1.8} className="text-accent" />
+              </div>
+              <span className="text-[10px] text-muted font-medium">{f.label}</span>
+            </Link>
+          )
+        })}
       </div>
 
-      <div className="divide-y divide-zinc-100 dark:divide-zinc-800 bg-white dark:bg-zinc-900">
-        {items.map((item, i) => (
-          <FeedCard key={`${item.type}-${item.id}`} item={item} index={i} activeTab={activeTab} />
-        ))}
-        {items.length === 0 && (
-          <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            {[1, 2, 3, 4].map((i) => <CaseCardSkeleton key={i} />)}
-          </div>
-        )}
-      </div>
+      <HomeFeed initialItems={items} initialHasMore={hasMore} />
     </div>
-  )
-}
-
-function FeedCard({ item, index, activeTab }: { item: FeedItem; index: number; activeTab: string }) {
-  if (activeTab !== "为你推荐" && item.category !== activeTab) return null
-
-  const href = item.type === "case" ? `/cases/${item.id}` : `/articles/${item.id}`
-  const isArticle = item.type === "article"
-  const imgSrc = item.coverUrl || item.firstImage || (isArticle ? getArticleCover(index) : getCover(index))
-
-  return (
-    <Link href={href} className="block">
-      <article className="relative bg-white dark:bg-zinc-900">
-        <div className="w-full aspect-[4/5] relative overflow-hidden bg-zinc-100 dark:bg-zinc-800">
-          <img src={imgSrc} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
-          {isArticle ? (
-            <div className="absolute top-3 left-3 px-2 py-0.5 bg-white/90 dark:bg-zinc-900/90 backdrop-blur rounded text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
-              📖 文章
-            </div>
-          ) : (
-            <div className="absolute top-3 left-3 px-2 py-0.5 bg-white/90 dark:bg-zinc-900/90 backdrop-blur rounded text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
-              {item.style} · {item.area}㎡
-            </div>
-          )}
-        </div>
-
-        <div className="px-3 pt-2 pb-3">
-          <h2 className="text-sm font-medium leading-snug line-clamp-1">{item.title}</h2>
-          <div className="flex items-center justify-between mt-1.5">
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">
-              {isArticle ? "设计圈" : "设计师"}
-            </span>
-            <span className="text-xs text-zinc-400">{item.likes}赞</span>
-          </div>
-        </div>
-      </article>
-    </Link>
   )
 }

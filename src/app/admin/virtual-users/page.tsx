@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
+import { getRoleLabel, ROLE_LABELS } from "@/lib/types"
 
 type VirtualUser = {
   id: string
@@ -21,7 +22,6 @@ type VirtualUser = {
   created_at: string
 }
 
-const ROLE_LABELS: Record<string, string> = { owner: "业主", designer: "设计师", worker: "工长", company: "公司" }
 
 export default function VirtualUsersPage() {
   const [users, setUsers] = useState<VirtualUser[]>([])
@@ -146,9 +146,9 @@ export default function VirtualUsersPage() {
         />
         <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1) }} className="px-2 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-xs outline-none">
           <option value="">全部角色</option>
-          <option value="owner">业主</option>
-          <option value="designer">设计师</option>
-          <option value="worker">工长</option>
+          <option value="homeowner">{getRoleLabel("homeowner")}</option>
+          <option value="designer">{getRoleLabel("designer")}</option>
+          <option value="worker">{getRoleLabel("worker")}</option>
         </select>
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }} className="px-2 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-xs outline-none">
           <option value="">全部状态</option>
@@ -263,12 +263,12 @@ export default function VirtualUsersPage() {
               </div>
               <div>
                 <p className="text-xs text-zinc-500 mb-1">角色</p>
-                <select value={editForm.role || "owner"} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                <select value={editForm.role || "homeowner"} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
                   className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg text-sm outline-none">
-                  <option value="owner">业主</option>
-                  <option value="designer">设计师</option>
-                  <option value="worker">工长</option>
-                  <option value="company">公司</option>
+                  <option value="homeowner">{getRoleLabel("homeowner")}</option>
+                  <option value="designer">{getRoleLabel("designer")}</option>
+                  <option value="worker">{getRoleLabel("worker")}</option>
+                  <option value="company">{getRoleLabel("company")}</option>
                 </select>
               </div>
               <div>
@@ -394,7 +394,7 @@ function ProfileSection({ userId }: { userId: string }) {
     <div className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl">
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs font-medium text-zinc-500">🎯 内容画像</p>
-        <button onClick={loadProfile} disabled={loading} className="text-[10px] text-zinc-400 underline">
+        <button onClick={() => { const c = new AbortController(); loadProfile(c.signal); }} disabled={loading} className="text-[10px] text-zinc-400 underline">
           {loading ? "分析中..." : "刷新分析"}
         </button>
       </div>

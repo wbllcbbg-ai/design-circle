@@ -1,6 +1,8 @@
 // 通义万相 (Tongyi Wanxiang) 生图工具
 // 使用阿里云 DashScope API 生成室内设计图片
 
+import { createDirectClient } from "@/lib/supabase/client"
+
 let _cachedKey: string | null = null
 
 export function setWanxiangKey(key: string) {
@@ -75,7 +77,8 @@ async function waitForTask(
     const status = json.output?.task_status
 
     if (status === "SUCCEEDED") {
-      return json.output?.results?.[0]?.url || null
+      const results = json.output?.results || []
+      return results.length > 0 ? results.map((r: any) => r.url).filter(Boolean).join(",") : null
     }
 
     if (status === "FAILED") {
@@ -130,14 +133,38 @@ export async function generateImages(
       return fallbackImages(count)
     }
 
-    // 轮询等待结果
-    const url = await waitForTask(taskId, key)
-    if (!url) return fallbackImages(count)
+    // 轮询等待结果（waitForTask 返回逗号分隔的多个 URL）
+    const urlsCsv = await waitForTask(taskId, key)
+    if (!urlsCsv) return fallbackImages(count)
 
-    return [url]
+    const urls = urlsCsv.split(",").filter(Boolean)
+    // 转存每张图片到 Supabase Storage
+    const permanentUrls = await Promise.all(urls.map((u) => rehostImage(u)))
+    return permanentUrls.filter(Boolean)
   } catch (err) {
     console.warn("Wanxiang API call failed:", err)
     return fallbackImages(count)
+  }
+}
+
+// 下载 OSS URL 图片并上传到 Supabase Storage，返回永久 URL
+async function rehostImage(imageUrl: string): Promise<string> {
+  try {
+    const res = await fetch(imageUrl)
+    if (!res.ok) return imageUrl
+    const blob = await res.blob()
+    const supabase = createDirectClient()
+    const ext = imageUrl.includes(".png") ? "png" : "jpg"
+    const fileName = `rehosted/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+    const { data, error } = await supabase.storage.from("images").upload(fileName, blob, {
+      contentType: blob.type,
+      upsert: false,
+    })
+    if (error || !data) return imageUrl
+    const { data: { publicUrl } } = supabase.storage.from("images").getPublicUrl(fileName)
+    return publicUrl
+  } catch {
+    return imageUrl
   }
 }
 

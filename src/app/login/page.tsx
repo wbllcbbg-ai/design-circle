@@ -24,7 +24,6 @@ export default function LoginPage() {
     setLoading(true)
 
     if (mode === "login") {
-      console.log("[Login] Attempting login via API for:", email)
       try {
         const res = await fetch("/api/login", {
           method: "POST",
@@ -32,15 +31,19 @@ export default function LoginPage() {
           body: JSON.stringify({ email, password }),
         })
         const data = await res.json()
-        console.log("[Login] API response:", data)
         if (data.error) {
-          setError(data.error)
+          const errMsg = data.error.toLowerCase()
+          if (errMsg.includes("invalid login") || errMsg.includes("invalid credentials")) {
+            setError("邮箱或密码错误")
+          } else if (errMsg.includes("email not confirmed")) {
+            setError("邮箱未验证，请检查收件箱")
+          } else {
+            setError(data.error)
+          }
         } else {
-          console.log("[Login] Login success")
           window.location.href = "/"
         }
       } catch (e: any) {
-        console.error("[Login] Fetch error:", e)
         setError("网络错误，请稍后重试")
       }
     } else {
@@ -166,7 +169,9 @@ export default function LoginPage() {
 
           <p className="text-center text-xs text-zinc-400">
             {mode === "login" ? (
-              <>还没有账号？<button type="button" onClick={() => setMode("register")} className="underline">注册</button></>
+              <>还没有账号？<button type="button" onClick={() => setMode("register")} className="underline">注册</button>
+              <span className="mx-2">·</span>
+              <a href="https://rlbxldrtxbyrrtekfims.supabase.co/auth/v1/recover" target="_blank" rel="noopener noreferrer" className="underline">忘记密码</a></>
             ) : (
               <>已有账号？<button type="button" onClick={() => setMode("login")} className="underline">登录</button></>
             )}

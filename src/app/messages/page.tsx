@@ -11,6 +11,7 @@ type Conversation = {
   created_at: string
   designer_id: string
   user_id: string
+  unread_count: number
   designer: { id: string; name: string; logo_url: string | null; type: string } | null
   user: { id: string; nickname: string; avatar_url: string | null } | null
 }
@@ -81,12 +82,19 @@ export default function MessagesPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{otherName}</span>
+                    <div className="flex items-center gap-1.5">
+                      {conv.unread_count > 0 && (
+                        <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                      )}
+                      <span className={`text-sm ${conv.unread_count > 0 ? "font-semibold" : "font-medium"}`}>{otherName}</span>
+                    </div>
                     {conv.last_message_at && (
                       <span className="text-[10px] text-zinc-400">{new Date(conv.last_message_at).toLocaleDateString()}</span>
                     )}
                   </div>
-                  <p className="text-xs text-zinc-400 truncate mt-0.5">{conv.last_message || "暂无消息"}</p>
+                  <p className={`text-xs truncate mt-0.5 ${conv.unread_count > 0 ? "text-zinc-600 dark:text-zinc-300 font-medium" : "text-zinc-400"}`}>
+                    {conv.last_message || "暂无消息"}
+                  </p>
                 </div>
               </Link>
             )

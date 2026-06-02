@@ -5,12 +5,37 @@ import { requireAuth } from "@/lib/auth-guard"
 export const dynamic = "force-dynamic"
 
 // 获取当前用户的对话列表
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const all = searchParams.get("all") === "true"
+
+  const supabase = createDirectClient()
+
+  if (all) {
+    // 管理员查看所有对话
+    const { data: convs } = await supabase
+      .from("conversations")
+      .select(`
+        id, last_message, last_message_at, created_at,
+        designer_id, user_id
+      `)
+      .order("last_message_at", { ascending: false })
+      .limit(50)
+
+    const convList = (convs ?? []).map(async (c: any) => {
+      const [designerRes, userRes] = await Promise.all([
+        supabase.from("designers").select("id, name, type").eq("id", c.designer_id).single(),
+        supabase.from("users").select("id, nickname").eq("id", c.user_id).single(),
+      ])
+      return { ...c, designer: designerRes.data, user: userRes.data }
+    })
+    const conversations = await Promise.all(convList)
+    return NextResponse.json({ conversations })
+  }
+
   const auth = await requireAuth()
   if (typeof auth !== "string") return auth
   const userId = auth
-
-  const supabase = createDirectClient()
 
   // 先查出当前用户的设计师身份（如果有）
   const { data: designer } = await supabase
@@ -35,16 +60,22 @@ export async function GET() {
 
   const { data: convs } = await query.order("last_message_at", { ascending: false }).limit(50)
 
-  // 批量查设计师和用户信息
+  // 批量查设计师、用户信息和未读数
   const convList = (convs ?? []).map(async (c: any) => {
-    const [designerRes, userRes] = await Promise.all([
+    const [designerRes, userRes, { count }] = await Promise.all([
       supabase.from("designers").select("id, name, logo_url, type").eq("id", c.designer_id).single(),
       supabase.from("users").select("id, nickname, avatar_url").eq("id", c.user_id).single(),
+      supabase.from("messages")
+        .select("*", { count: "exact", head: true })
+        .eq("conversation_id", c.id)
+        .neq("sender_id", userId)
+        .eq("is_read", false)
     ])
     return {
       ...c,
       designer: designerRes.data,
       user: userRes.data,
+      unread_count: count ?? 0,
     }
   })
 
@@ -89,6 +120,9 @@ export async function POST(req: Request) {
     if (convErr) return NextResponse.json({ error: convErr.message }, { status: 500 })
     conversationId = conv.id
   }
+
+  // 埋点：记录咨询
+  console.log(`[CONSULT] user=${userId} designer=${designer_id} at=${new Date().toISOString()}`)
 
   // 发消息
   const { data: msg, error: msgErr } = await supabase

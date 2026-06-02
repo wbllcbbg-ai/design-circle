@@ -10,14 +10,34 @@ export async function GET(req: Request) {
   const style = searchParams.get("style") || ""
 
   const supabase = createDirectClient()
-  let query = supabase.from("cases").select("*").order("created_at", { ascending: false }).limit(50)
+  let query = supabase.from("cases").select("*", { count: "exact" }).order("created_at", { ascending: false }).limit(50)
 
   if (style) {
     query = query.eq("style", style)
   }
 
   const { data } = await query
-  return NextResponse.json({ cases: data ?? [] })
+  const casesList = data ?? []
+
+  // 获取案例的设计师信息
+  const designerIds = [...new Set(casesList.map((c) => c.designer_id).filter(Boolean))]
+  let designerMap: Record<string, { id: string; name: string; type: string }> = {}
+  if (designerIds.length > 0) {
+    const { data: designers } = await supabase
+      .from("designers")
+      .select("id, name, type")
+      .in("id", designerIds)
+    for (const d of designers ?? []) {
+      designerMap[d.id] = { id: d.id, name: d.name, type: d.type }
+    }
+  }
+
+  const casesWithDesigner = casesList.map((c) => ({
+    ...c,
+    designer: c.designer_id && designerMap[c.designer_id] ? designerMap[c.designer_id] : null,
+  }))
+
+  return NextResponse.json({ cases: casesWithDesigner })
 }
 
 export async function POST(req: Request) {

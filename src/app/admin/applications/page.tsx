@@ -13,7 +13,7 @@ type Application = {
   created_at: string
 }
 
-const TYPE_LABEL: Record<string, string> = { designer: "设计师", company: "公司", worker: "工长" }
+import { getRoleLabel } from "@/lib/types"
 
 export default function ApplicationsPage() {
   const [apps, setApps] = useState<Application[]>([])
@@ -59,7 +59,7 @@ export default function ApplicationsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-sm">{app.name}</p>
-                <p className="text-xs text-zinc-400">{TYPE_LABEL[app.type] || app.type} · {app.phone}</p>
+                <p className="text-xs text-zinc-400">{getRoleLabel(app.type)} · {app.phone}</p>
               </div>
               <span className={`text-[10px] px-2 py-0.5 rounded-full ${
                 app.status === "pending" ? "bg-orange-100 text-orange-600 dark:bg-orange-900 dark:text-orange-200" :

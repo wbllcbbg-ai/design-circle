@@ -22,33 +22,69 @@ const TYPE_MAP: Record<string, string> = {
   worker: "工长",
 }
 
+const TYPE_EN_MAP: Record<string, string> = {
+  全部: "",
+  设计师: "designer",
+  装修公司: "company",
+  工长: "worker",
+}
+
 export default function DesignersPage() {
   const [designers, setDesigners] = useState<Designer[]>([])
   const [loading, setLoading] = useState(true)
   const [active, setActive] = useState("全部")
+  const [search, setSearch] = useState("")
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const pageSize = 20
 
   useEffect(() => {
-    fetch("/api/designers")
+    setLoading(true)
+    const params = new URLSearchParams({ page: String(page), q: search, type: TYPE_EN_MAP[active] })
+    fetch(`/api/designers?${params}`)
       .then((r) => r.json())
-      .then((res) => { setDesigners(res.designers ?? []); setLoading(false) })
+      .then((res) => {
+        setDesigners(res.designers ?? [])
+        setTotal(res.total ?? 0)
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
-  }, [])
+  }, [active, search, page])
+
+  const totalPages = Math.ceil(total / pageSize)
 
   return (
     <div className="bg-white dark:bg-zinc-900 min-h-screen">
-      <div className="px-3 py-2.5 overflow-x-auto scrollbar-hide border-b border-zinc-100 dark:border-zinc-800">
-        <div className="flex gap-2">
-          {TABS.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActive(tab)}
-              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium ${
-                tab === active ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+      {/* 搜索栏 + Tab */}
+      <div className="border-b border-zinc-100 dark:border-zinc-800">
+        <div className="px-3 pt-2.5">
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+              placeholder="搜索设计师..."
+              className="w-full pl-9 pr-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 rounded-xl border-0 outline-none focus:ring-1 focus:ring-zinc-300 dark:focus:ring-zinc-600 placeholder:text-zinc-400"
+            />
+          </div>
+        </div>
+        <div className="px-3 py-2 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2">
+            {TABS.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => { setActive(tab); setPage(1) }}
+                className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium ${
+                  tab === active ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -59,13 +95,14 @@ export default function DesignersPage() {
       )}
 
       {!loading && designers.length === 0 && (
-        <div className="px-4 py-16 text-center text-sm text-zinc-400">暂无设计师</div>
+        <div className="px-4 py-16 text-center text-sm text-zinc-400">
+          {search ? "没有找到匹配的设计师" : "暂无设计师"}
+        </div>
       )}
 
       <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
         {!loading && designers.map((d, i) => {
           const typeLabel = TYPE_MAP[d.type] || d.type
-          if (active !== "全部" && typeLabel !== active) return null
           const hue = (i * 37 + 280) % 360
           return (
             <Link key={d.id} href={`/designers/${d.id}`} className="block px-4 py-3">
@@ -96,6 +133,27 @@ export default function DesignersPage() {
           )
         })}
       </div>
+
+      {/* 分页 */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 px-4 py-4 border-t border-zinc-100 dark:border-zinc-800">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className="px-3 py-1.5 text-xs rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 disabled:opacity-40"
+          >
+            上一页
+          </button>
+          <span className="text-xs text-zinc-400">{page}/{totalPages}</span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className="px-3 py-1.5 text-xs rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 disabled:opacity-40"
+          >
+            下一页
+          </button>
+        </div>
+      )}
     </div>
   )
 }

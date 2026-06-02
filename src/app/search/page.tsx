@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 const HOT_TAGS = ["现代简约", "北欧风", "小户型", "老房改造", "预算10万", "厨房设计", "全屋定制", "水电改造"]
 
@@ -12,6 +13,7 @@ type SearchResult = {
 }
 
 export default function SearchPage() {
+  const router = useRouter()
   const [query, setQuery] = useState("")
   const [showResults, setShowResults] = useState(false)
   const [results, setResults] = useState<SearchResult | null>(null)
@@ -44,6 +46,11 @@ export default function SearchPage() {
       {/* 搜索框 + 取消 */}
       <div className="sticky top-0 bg-white/90 dark:bg-zinc-900/90 backdrop-blur z-10 border-b border-zinc-100 dark:border-zinc-800">
         <div className="flex items-center gap-2 px-4 h-12">
+          <button onClick={() => { if (window.history.length > 1) router.back(); else router.push("/") }}>
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+          </button>
           <div className="flex-1 flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-full px-3.5 h-9">
             <svg className="w-4 h-4 text-zinc-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8" />

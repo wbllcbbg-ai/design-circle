@@ -1,12 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { ROLE_LABELS } from "@/lib/types"
 
 const ROLE_BADGES: Record<string, string> = {
-  owner: "🏠 业主",
-  designer: "🎨 设计师",
-  worker: "🔧 工长",
-  company: "🏢 公司",
+  homeowner: "🏠 " + ROLE_LABELS.homeowner,
+  designer: "🎨 " + ROLE_LABELS.designer,
+  worker: "🔧 " + ROLE_LABELS.worker,
+  company: "🏢 " + ROLE_LABELS.company,
 }
 
 export default function EcoPage() {

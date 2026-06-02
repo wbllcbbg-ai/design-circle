@@ -27,6 +27,15 @@ type Case = {
   area: number
 }
 
+type Article = {
+  id: string
+  title: string
+  cover_url: string | null
+  category: string
+  created_at: string
+  like_count: number
+}
+
 type Review = {
   id: string
   rating: number
@@ -34,7 +43,7 @@ type Review = {
   created_at: string
 }
 
-const TYPE_MAP: Record<string, string> = { designer: "设计师", company: "公司", worker: "工长" }
+import { getRoleLabel } from "@/lib/types"
 
 // 评价弹窗
 function ReviewModal({
@@ -173,15 +182,146 @@ function ReviewModal({
   )
 }
 
+// 咨询弹窗
+function ConsultModal({
+  open,
+  onClose,
+  designerId,
+  designerName,
+  onSent,
+}: {
+  open: boolean
+  onClose: () => void
+  designerId: string
+  designerName: string
+  onSent: () => void
+}) {
+  const [name, setName] = useState("")
+  const [area, setArea] = useState("")
+  const [budget, setBudget] = useState("")
+  const [content, setContent] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
+  const supabase = createClient()
+
+  useEffect(() => {
+    if (!open) return
+    setName("")
+    setArea("")
+    setBudget("")
+    setContent("")
+    setSubmitting(false)
+    setError("")
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.user_metadata?.nickname) setName(user.user_metadata.nickname)
+    })
+  }, [open, supabase])
+
+  const handleSubmit = async () => {
+    if (!content.trim()) { setError("请描述你的装修需求"); return }
+    setSubmitting(true)
+    setError("")
+
+    const message = [area || budget ? `【${area ? `${area}㎡` : ""}${area && budget ? " · " : ""}${budget ? `预算${budget}` : ""}】` : "", content.trim()].filter(Boolean).join("\n")
+
+    const res = await fetch("/api/conversations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ designer_id: designerId, content: message })
+    })
+    const data = await res.json()
+    if (!data.success) { setError(data.error || "发送失败"); setSubmitting(false); return }
+    onSent()
+  }
+
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white dark:bg-zinc-900 w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-5 pb-8 max-h-[85vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold">咨询 {designerName}</h3>
+          <button onClick={onClose} className="p-1">
+            <svg className="w-5 h-5 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-zinc-500 block mb-1">你的称呼（选填）</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="怎么称呼你？"
+              className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 rounded-xl border-0 outline-none focus:ring-1 focus:ring-zinc-300 dark:focus:ring-zinc-600 placeholder:text-zinc-400"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="text-xs text-zinc-500 block mb-1">房屋面积（选填）</label>
+              <input
+                value={area}
+                onChange={(e) => setArea(e.target.value.replace(/\D/g, ""))}
+                placeholder="如 130"
+                className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 rounded-xl border-0 outline-none focus:ring-1 focus:ring-zinc-300 dark:focus:ring-zinc-600 placeholder:text-zinc-400"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-xs text-zinc-500 block mb-1">装修预算（选填）</label>
+              <input
+                value={budget}
+                onChange={(e) => setBudget(e.target.value.replace(/\D/g, ""))}
+                placeholder="如 40万"
+                className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 rounded-xl border-0 outline-none focus:ring-1 focus:ring-zinc-300 dark:focus:ring-zinc-600 placeholder:text-zinc-400"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-zinc-500 block mb-1">需求描述</label>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={"你家在哪个小区？想装什么风格？大概什么时候想开工？"}
+              rows={4}
+              className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 rounded-xl border-0 outline-none focus:ring-1 focus:ring-zinc-300 dark:focus:ring-zinc-600 resize-none placeholder:text-zinc-400"
+            />
+          </div>
+
+          {error && <p className="text-xs text-red-500">{error}</p>}
+
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || !content.trim()}
+            className="w-full py-2.5 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 rounded-full text-sm font-medium disabled:opacity-40"
+          >
+            {submitting ? "发送中..." : "发送咨询请求"}
+          </button>
+
+          <p className="text-[10px] text-zinc-400 text-center">💬 设计师会在 <strong>30分钟内</strong> 回复你</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function DesignerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
   const supabase = createClient()
   const [designer, setDesigner] = useState<Designer | null>(null)
   const [cases, setCases] = useState<Case[]>([])
+  const [articles, setArticles] = useState<Article[]>([])
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [reviewOpen, setReviewOpen] = useState(false)
+  const [consultOpen, setConsultOpen] = useState(false)
+  const [sentToast, setSentToast] = useState(false)
+  const [contentTab, setContentTab] = useState<"cases" | "articles">("cases")
 
   useEffect(() => {
     fetch(`/api/designers/${id}`)
@@ -189,6 +329,7 @@ export default function DesignerDetailPage({ params }: { params: Promise<{ id: s
       .then((res) => {
         setDesigner(res.designer)
         setCases(res.cases ?? [])
+        setArticles(res.articles ?? [])
         setReviews(res.reviews ?? [])
         setLoading(false)
       })
@@ -201,12 +342,12 @@ export default function DesignerDetailPage({ params }: { params: Promise<{ id: s
     <div className="bg-white dark:bg-zinc-900 min-h-screen">
       <div className="sticky top-0 bg-white/90 dark:bg-zinc-900/90 backdrop-blur z-10 border-b border-zinc-100 dark:border-zinc-800">
         <div className="flex items-center h-12 px-4">
-          <Link href="/designers" className="flex items-center gap-2">
+          <button onClick={() => { if (window.history.length > 1) router.back(); else router.push("/designers") }} className="flex items-center gap-2">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="m15 18-6-6 6-6" />
             </svg>
             <span className="text-sm font-medium">设计师</span>
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -218,7 +359,7 @@ export default function DesignerDetailPage({ params }: { params: Promise<{ id: s
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-semibold">{designer.name}</h1>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500">{TYPE_MAP[designer.type] || designer.type}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500">{getRoleLabel(designer.type)}</span>
               {designer.is_verified && <span className="text-[10px] text-green-600 dark:text-green-400">✓ 已认证</span>}
             </div>
             <p className="text-xs text-zinc-400 mt-0.5">{designer.description}</p>
@@ -237,21 +378,19 @@ export default function DesignerDetailPage({ params }: { params: Promise<{ id: s
           ))}
         </div>
 
+        {sentToast && (
+          <div className="mt-4 px-4 py-2.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-xs text-green-700 dark:text-green-300">
+            <p>✅ 咨询已发送，设计师会在 <strong>30分钟内</strong> 回复你</p>
+            <Link href="/messages" className="block mt-1.5 underline underline-offset-2 font-medium">
+              查看我的咨询 →
+            </Link>
+          </div>
+        )}
         <button
           onClick={async () => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) { router.push('/login'); return }
-            const content = prompt('你想咨询什么？')
-            if (!content) return
-            const res = await fetch('/api/conversations', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ designer_id: id, content })
-            })
-            const data = await res.json()
-            if (data.success) {
-              router.push('/messages')
-            }
+            setConsultOpen(true)
           }}
           className="w-full mt-4 py-2.5 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 rounded-full text-sm font-medium"
         >
@@ -286,27 +425,84 @@ export default function DesignerDetailPage({ params }: { params: Promise<{ id: s
         }}
       />
 
-      {cases.length > 0 && (
+      <ConsultModal
+        open={consultOpen}
+        onClose={() => setConsultOpen(false)}
+        designerId={id}
+        designerName={designer.name}
+        onSent={() => { setConsultOpen(false); setSentToast(true); setTimeout(() => setSentToast(false), 8000) }}
+      />
+
+      {(cases.length > 0 || articles.length > 0) && (
         <div className="px-4 pb-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-medium">案例作品</h2>
+          {/* Tab 切换 */}
+          <div className="flex gap-4 mb-3 border-b border-zinc-100 dark:border-zinc-800">
+            {cases.length > 0 && (
+              <button
+                onClick={() => setContentTab("cases")}
+                className={`pb-2 text-sm font-medium border-b-2 transition-colors ${
+                  contentTab === "cases"
+                    ? "border-zinc-900 dark:border-white text-zinc-900 dark:text-white"
+                    : "border-transparent text-zinc-400"
+                }`}
+              >
+                案例作品
+              </button>
+            )}
+            {articles.length > 0 && (
+              <button
+                onClick={() => setContentTab("articles")}
+                className={`pb-2 text-sm font-medium border-b-2 transition-colors ${
+                  contentTab === "articles"
+                    ? "border-zinc-900 dark:border-white text-zinc-900 dark:text-white"
+                    : "border-transparent text-zinc-400"
+                }`}
+              >
+                发布文章
+              </button>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            {cases.map((item, i) => {
-              const hue = (i * 47 + 200) % 360
-              return (
-                <Link key={item.id} href={`/cases/${item.id}`} className="block">
-                  <div className="w-full aspect-[4/3] rounded-xl mb-1.5" style={{ background: `linear-gradient(135deg, hsl(${hue}, 35%, 75%), hsl(${(hue + 60) % 360}, 30%, 65%))` }} />
-                  <p className="text-xs font-medium line-clamp-1">{item.title}</p>
-                  <div className="flex items-center gap-1.5 text-[10px] text-zinc-400 mt-0.5">
-                    <span>{item.style}</span>
-                    <span>·</span>
-                    <span>{item.area}㎡</span>
+
+          {/* 案例网格 */}
+          {contentTab === "cases" && (
+            <div className="grid grid-cols-2 gap-2">
+              {cases.map((item, i) => {
+                const hue = (i * 47 + 200) % 360
+                return (
+                  <Link key={item.id} href={`/cases/${item.id}`} className="block">
+                    <div className="w-full aspect-[4/3] rounded-xl mb-1.5" style={{ background: `linear-gradient(135deg, hsl(${hue}, 35%, 75%), hsl(${(hue + 60) % 360}, 30%, 65%))` }} />
+                    <p className="text-xs font-medium line-clamp-1">{item.title}</p>
+                    <div className="flex items-center gap-1.5 text-[10px] text-zinc-400 mt-0.5">
+                      <span>{item.style}</span>
+                      <span>·</span>
+                      <span>{item.area}㎡</span>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+
+          {/* 文章列表 */}
+          {contentTab === "articles" && (
+            <div className="space-y-2">
+              {articles.map((item) => (
+                <Link key={item.id} href={`/articles/${item.id}`} className="flex items-center gap-3 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
+                  <div className="w-14 h-14 rounded-lg shrink-0 bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-lg">
+                    📖
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium leading-snug line-clamp-2">{item.title}</p>
+                    <div className="flex items-center gap-2 text-[10px] text-zinc-400 mt-1">
+                      <span>{item.category}</span>
+                      <span>·</span>
+                      <span>{item.like_count ?? 0}赞</span>
+                    </div>
                   </div>
                 </Link>
-              )
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

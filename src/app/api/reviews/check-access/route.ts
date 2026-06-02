@@ -41,45 +41,6 @@ export async function GET(req: Request) {
 
   let source: string | null = null
 
-  if (designer) {
-    const { data: conv } = await supabase
-      .from("conversations")
-      .select("id")
-      .eq("designer_id", designerId)
-      .eq("user_id", userId)
-      .maybeSingle()
-
-    if (conv) source = "consult"
-  }
-
-  // 3. 查是否有浏览过该设计师的案例
-  if (!source) {
-    const { data: cases } = await supabase
-      .from("cases")
-      .select("id")
-      .eq("designer_id", designerId)
-      .limit(5)
-
-    if (cases && cases.length > 0) {
-      const caseIds = cases.map(c => c.id)
-      const { data: history } = await supabase
-        .from("browse_history")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("target_type", "case")
-        .in("target_id", caseIds)
-        .limit(1)
-
-      if (history && history.length > 0) source = "browse"
-    }
-  }
-
-  if (!source) {
-    return NextResponse.json({
-      can_review: false,
-      reason: "请先咨询设计师或浏览其案例后再评价",
-    })
-  }
-
-  return NextResponse.json({ can_review: true, source })
+  // 有案例的设计师，登录用户即可评价
+  return NextResponse.json({ can_review: true, source: "browse" })
 }

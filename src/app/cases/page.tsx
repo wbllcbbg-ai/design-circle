@@ -11,6 +11,7 @@ type CaseItem = {
   area: number
   budget: number
   cover_url: string
+  designer: { id: string; name: string; type: string } | null
 }
 
 const STYLES = ["全部", "现代简约", "北欧风", "新中式", "日式", "轻奢", "混搭"]
@@ -74,6 +75,15 @@ export default function CasesPage() {
                       <span>{item.area}㎡</span>
                       {item.budget && <><span>·</span><span>{item.budget}万</span></>}
                     </div>
+                    {item.designer && (
+                      <Link
+                        href={`/designers/${item.designer.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-block mt-1 text-[10px] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                      >
+                        👤 {item.designer.name}
+                      </Link>
+                    )}
                   </div>
                 </div>
               </Link>

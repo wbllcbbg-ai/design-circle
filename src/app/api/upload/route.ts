@@ -1,7 +1,10 @@
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
+import { requireAuth } from "@/lib/auth-guard"
 
 export async function POST(req: Request) {
+  const auth = await requireAuth()
+  if (typeof auth !== "string") return auth
   const formData = await req.formData()
   const file = formData.get("file") as File | null
 

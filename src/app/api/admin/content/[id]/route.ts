@@ -22,13 +22,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     ])
     const data = aRes.data || cRes.data
     if (!data) return NextResponse.json({ error: "内容不存在" }, { status: 404 })
+    const content = (data as any).content || (data as any).description || ""
     const aiContent = data.ai_generated_content || null
     return NextResponse.json({
       diff: {
         title_edited: aiContent ? data.title !== aiContent?.slice(0, 100) : false,
-        content_length_change: (data.content || data.description || "")?.length - ((aiContent)?.length || 0),
+        content_length_change: content?.length - ((aiContent)?.length || 0),
         ai_version: aiContent ? aiContent.slice(0, 500) : null,
-        current_version: (data.content || data.description || "")?.slice(0, 500) || "",
+        current_version: content?.slice(0, 500) || "",
         edited_by_human: data.edited_by_human || false,
       },
     })
@@ -105,7 +106,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   // 版本 diff 特征回传 — 写入该虚拟人的 content_profile
   if (row.virtual_user_id && body.content) {
-    const origLen = row.ai_generated_content?.length || row.content?.length || row.description?.length || 0
+    const r = row as any
+    const origLen = r.ai_generated_content?.length || r.content?.length || r.description?.length || 0
     const newLen = body.content.length
     const diffMeta: Record<string, any> = {
       last_edit: {

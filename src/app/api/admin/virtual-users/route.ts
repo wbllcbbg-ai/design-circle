@@ -45,12 +45,13 @@ export async function POST(req: Request) {
   const supabase = createDirectClient()
 
   // 批量生成虚拟人的 prompt
-  const namesPrompt = `生成${generateCount}个中文昵称，用于一个重庆家居装修平台的虚拟用户。
+  const namesPrompt = `生成${generateCount}个中文昵称，用于一个重庆家居装修平台的虚拟用户。必须严格按照角色分配昵称风格，混用会导致角色混乱。
 要求：
 - 每个昵称要有网感，不能像机器人
-- 业主类：带重庆地名或装修生活感（如：山城小汤圆、今天又超预算了、工地盯梢中）
-- 设计师类：专业身份+名字（如：设计圈李工、全案设计阿杰）
-- 工长类：实在落地感（如：老张装修队）
+- 业主类（占比70%）：活泼接地气的网名，带重庆地名或装修生活感（如：山城小汤圆、今天又超预算了、工地盯梢中、江北装修小白、沙坪坝打工人）
+- 设计师类（占比20%）：必须听起来像专业人士，不能像业主昵称（如：设计圈李工、全案设计阿杰、空间规划师王姐、软装搭配师小林、主案设计师老张）
+- 工长类（占比10%）：实在落地感（如：老张装修队、刘工监理）
+- 设计师类昵称禁止出现装修生活感、工地盯梢这类词汇，必须体现专业身份
 - 确保不重复、不包含敏感词
 - 用 JSON 数组返回：["昵称1", "昵称2", ...]`
 
@@ -140,7 +141,7 @@ export async function POST(req: Request) {
             id: vu.id,
             email: `virtual_${vu.id}@designcircle.local`,
             nickname: vu.nickname,
-            role: "user",
+            role: vu.role === "designer" ? "designer" : vu.role === "owner" ? "homeowner" : vu.role,
             city_id: null,
           })
           .select()

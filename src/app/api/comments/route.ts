@@ -18,13 +18,31 @@ export async function GET(req: Request) {
   const supabase = await createServerSupabaseClient()
   const { data } = await supabase
     .from("comments")
-    .select("id, content, parent_id, created_at, user_id")
+    .select(`
+      id,
+      content,
+      parent_id,
+      created_at,
+      user_id,
+      virtual_user_id,
+      users!comments_user_id_fkey ( nickname, avatar_url )
+    `)
     .eq("target_type", targetType)
     .eq("target_id", targetId)
     .order("created_at", { ascending: false })
     .limit(50)
 
-  return NextResponse.json({ comments: data ?? [] })
+  // 扁平化：把 users 嵌套拉平为 user { nickname, avatar_url }
+  const comments = (data ?? []).map((c: any) => ({
+    id: c.id,
+    content: c.content,
+    parent_id: c.parent_id,
+    created_at: c.created_at,
+    user_id: c.user_id,
+    virtual_user_id: c.virtual_user_id,
+    user: c.users || { nickname: "未知用户", avatar_url: null },
+  }))
+  return NextResponse.json({ comments })
 }
 
 // 创建评论

@@ -115,6 +115,29 @@ export default function AdminPage() {
     setEditSaving(false)
   }
 
+  const publishItem = async (id: string, type: string) => {
+    const table = type === "case" ? "cases" : "articles"
+    try {
+      await fetch(`/api/admin/content/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_published: true }),
+      })
+      setPage(1)
+      setTimeout(() => setPage(page), 50)
+    } catch {}
+  }
+
+  const deleteItem = async (id: string, type: string) => {
+    if (!confirm("确定删除？")) return
+    const table = type === "case" ? "cases" : "articles"
+    try {
+      await fetch(`/api/admin/content/${id}`, { method: "DELETE" })
+      setPage(1)
+      setTimeout(() => setPage(page), 50)
+    } catch {}
+  }
+
   // --- 加载内容列表 ---
   useEffect(() => {
     setLoading(true)
@@ -151,7 +174,7 @@ export default function AdminPage() {
       const res = await fetch("/api/admin/generate-content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ strategy: genStrategy, types: genTypes }),
+        body: JSON.stringify({ strategy: genStrategy, types: genTypes, count: genCount }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -306,6 +329,21 @@ export default function AdminPage() {
                     </label>
                   ))}
                 </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={genCount}
+                    onChange={(e) => setGenCount(Math.min(50, Math.max(1, parseInt(e.target.value) || 10)))}
+                    className="w-16 px-2 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-xs outline-none text-center"
+                  />
+                  <span className="text-[10px] text-zinc-400">条/类型</span>
+                </div>
+                <p className="text-[10px] text-zinc-400 leading-relaxed">
+                  每种类型各生成指定数量，实际数量受虚拟人数限制<br />
+                  文章/案例 ≤ 设计师数 · 评论/提问 ≤ 业主数
+                </p>
                 <button
                   onClick={handleBatchGenerate}
                   disabled={batchGenerating || genTypes.length === 0}
@@ -408,6 +446,20 @@ export default function AdminPage() {
                           </span>
                         </td>
                         <td className="py-2 pl-2 whitespace-nowrap text-zinc-400 text-right">{item.createdAt}</td>
+                        <td className="py-2 pl-2 whitespace-nowrap">
+                          <div className="flex items-center gap-1">
+                            {item.status === "draft" && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); publishItem(item.id, item.type) }}
+                                className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 hover:bg-green-100"
+                              >发布</button>
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); deleteItem(item.id, item.type) }}
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 dark:bg-red-900/20 dark:text-red-400 hover:bg-red-100"
+                            >删除</button>
+                          </div>
+                        </td>
                       </tr>
                     )
                   })}

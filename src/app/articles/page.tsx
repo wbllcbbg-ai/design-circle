@@ -17,6 +17,7 @@ type Article = {
     id: string
     nickname: string
     avatar_url: string | null
+    designer_id: string | null
     designer_type: string | null
     is_verified_designer: boolean
   }
@@ -79,7 +80,7 @@ export default function ArticlesPage() {
                             </div>
                           )}
                         </div>
-                        <Link href={`/users/${a.author.id}`} className="text-[11px] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">{a.author.nickname}</Link>
+                        <Link href={a.author.designer_id ? `/designers/${a.author.designer_id}` : `/users/${a.author.id}`} className="text-[11px] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">{a.author.nickname}</Link>
                         {a.author.designer_type && (
                           <span className="text-[9px] px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-400">{USER_TYPE_MAP[a.author.designer_type] || a.author.designer_type}</span>
                         )}

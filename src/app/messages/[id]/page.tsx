@@ -40,6 +40,26 @@ export default function ConversationDetailPage({ params }: { params: Promise<{ i
 
   useEffect(() => { loadMessages() }, [id])
 
+  // 10s 轮询新消息
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetch(`/api/conversations/${id}`)
+        .then(r => r.json())
+        .then(data => {
+          const msgs = data.messages ?? []
+          setMessages(prev => {
+            const existingIds = new Set(prev.map(m => m.id))
+            const newOnes = msgs.filter((m: Message) => !existingIds.has(m.id))
+            if (newOnes.length === 0) return prev
+            // 返回新数组触发滚动
+            return msgs
+          })
+        })
+        .catch(() => {})
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [id])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
