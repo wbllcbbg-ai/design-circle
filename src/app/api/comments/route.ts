@@ -1,4 +1,3 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth-guard"
@@ -15,24 +14,33 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "target_id required" }, { status: 400 })
   }
 
-  const supabase = await createServerSupabaseClient()
+  const supabase = createDirectClient()
   const { data } = await supabase
     .from("comments")
-    .select(`
-      id,
-      content,
-      parent_id,
-      created_at,
-      user_id,
-      virtual_user_id,
-      users!comments_user_id_fkey ( nickname, avatar_url )
-    `)
+    .select("id, content, parent_id, created_at, user_id, virtual_user_id")
     .eq("target_type", targetType)
     .eq("target_id", targetId)
     .order("created_at", { ascending: false })
     .limit(50)
 
-  // 扁平化：把 users 嵌套拉平为 user { nickname, avatar_url }
+  // 手动查用户名（先查 public.users，找不到则查 auth.users）
+  const userIds = [...new Set((data ?? []).map((c: any) => c.user_id).filter(Boolean))]
+  const { data: users } = userIds.length > 0
+    ? await supabase.from("users").select("id, nickname, avatar_url").in("id", userIds)
+    : { data: [] }
+  const userMap = Object.fromEntries((users ?? []).map((u: any) => [u.id, u]))
+
+  // fallback：auth.users 中查找
+  const missingIds = userIds.filter((id: string) => !userMap[id])
+  if (missingIds.length > 0) {
+    const { data: authUsers } = await supabase.auth.admin.listUsers()
+    for (const au of authUsers?.users || []) {
+      if (missingIds.includes(au.id)) {
+        userMap[au.id] = { nickname: au.email?.split("@")[0] || "用户", avatar_url: null }
+      }
+    }
+  }
+
   const comments = (data ?? []).map((c: any) => ({
     id: c.id,
     content: c.content,
@@ -40,7 +48,7 @@ export async function GET(req: Request) {
     created_at: c.created_at,
     user_id: c.user_id,
     virtual_user_id: c.virtual_user_id,
-    user: c.users || { nickname: "未知用户", avatar_url: null },
+    user: userMap[c.user_id] || { nickname: "未知用户", avatar_url: null },
   }))
   return NextResponse.json({ comments })
 }

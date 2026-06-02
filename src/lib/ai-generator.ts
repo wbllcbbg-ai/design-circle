@@ -156,18 +156,21 @@ ${historyBlock || "  （暂无历史内容）"}
 要求：
 1. 内容要符合该用户的身份和风格
 2. 如果有历史内容，要自然地延续之前的逻辑
-3. 不要重复使用相同的开头句式
-${user.content_profile?.topics?.length ? `4. 该用户擅长的话题：${user.content_profile.topics.join("、")}` : ""}
-${user.content_profile?.style ? `5. 该用户偏好的表达风格：${user.content_profile.style}` : ""}
-${user.tone_style !== "professional" ? "4. 使用自然的口语化表达" : ""}
-${user.role === "owner" ? "5. 内容围绕重庆本地装修场景" : ""}`
+3. 不要使用固定的句式结构——真人的帖子不会每段都工整
+4. 允许口语化表达、语气词、不完美的句子
+5. 不要使用"以下是""首先其次""综上所述""总之"等框架词
+6. 不要每次都重复一模一样的地域词（如有人每条都以"重庆"开头的，这不是真人）
+${user.content_profile?.topics?.length ? `7. 该用户擅长的话题：${user.content_profile.topics.join("、")}` : ""}
+${user.content_profile?.style ? `8. 该用户偏好的表达风格：${user.content_profile.style}` : ""}
+${user.tone_style !== "professional" ? "9. 使用自然的口语化表达，偶尔加个语气词" : ""}
+${user.role === "owner" ? "10. 内容围绕本地装修场景，但不要每次都以地域开头" : ""}`
 }
 
 // === 生成器：按类型 ===
 
 export async function generateArticle(user: VirtualUser, history: HistoryItem[]) {
   const prompt = buildContextPrompt(user, history,
-    `请以该用户的身份写一篇重庆本地装修攻略文章。主题从以下列表中随机选择一种，不要每次都选同一个：
+    `请以该用户的身份写一篇装修攻略文章，语气要像普通人在网上分享经验，不要像小编写官方文章。主题从以下列表中随机选择一种，不要每次都选同一个：
 1. 预算控制/省钱技巧
 2. 风格搭配指南（日式/北欧/轻奢/新中式/混搭/工业风等，不要只写轻奢）
 3. 材料选购攻略（瓷砖/地板/乳胶漆/橱柜等）
@@ -211,7 +214,7 @@ export async function generateArticle(user: VirtualUser, history: HistoryItem[])
 
 export async function generateCase(user: VirtualUser, history: HistoryItem[]) {
   const prompt = buildContextPrompt(user, history,
-    `请以该设计师的身份发布一个重庆本地的装修案例。风格从以下随机选择，不要每次都选轻奢：
+    `请以该设计师的身份发布一个真实的装修案例，语气像个设计师在分享作品而不是官方宣传。风格从以下随机选择，不要每次都选轻奢：
 现代简约、日式、北欧、轻奢、新中式、混搭、工业风
 返回 JSON 格式：{"title": "...", "style": "...", "area": 80, "budget": 150000, "description": "..."}
 - style 从上面随机选一个

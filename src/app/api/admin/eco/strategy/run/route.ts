@@ -279,7 +279,7 @@ async function executeStrategy(runId: string) {
               display_virtual_user_name: user.nickname,
               publish_at: publishAt,
               is_published: false,
-            }).catch(() => {})
+            }).then(() => {}).catch(() => {})
             // 互动：随机选取其他虚拟人为这篇文章点赞、评论
             const likers = activeVus.filter(v => v.id !== user.id).sort(() => Math.random() - 0.5).slice(0, Math.floor(Math.random() * 3) + 1)
             for (const liker of likers) {
@@ -287,7 +287,7 @@ async function executeStrategy(runId: string) {
                 user_id: liker.user_id,
                 target_type: "article",
                 target_id: dbResult.id,
-              }).catch(() => {}) // 静默失败
+              }).then(() => {}).catch(() => {}) // 静默失败
             }
             // 加一条评论
             const commenter = activeVus.filter(v => v.id !== user.id).sort(() => Math.random() - 0.5)[0]
@@ -299,11 +299,11 @@ async function executeStrategy(runId: string) {
                 user_id: commenter.user_id,
                 content: feedback[Math.floor(Math.random() * feedback.length)],
                 virtual_user_id: commenter.id,
-              }).catch(() => {})
+              }).then(() => {}).catch(() => {})
             }
             succeeded.article++
             // 更新虚拟人内容计数和活跃时间
-            await supabase.rpc("increment_vu_content", { p_id: user.id }).catch(() => {})
+            await supabase.rpc("increment_vu_content", { p_id: user.id }).then(() => {}).catch(() => {})
             await updateProgress("文章生成中")
             return { ok: true }
           } catch (err: any) {
@@ -352,6 +352,7 @@ async function executeStrategy(runId: string) {
               description: caseItem.description,
               ai_generated_content: caseItem.description,
               images: caseItem.images,
+              tags: [caseItem.style || "装修"],
               designer_id: designerId,
               virtual_user_id: user.id,
               is_published: true,
@@ -372,7 +373,7 @@ async function executeStrategy(runId: string) {
               display_virtual_user_name: user.nickname,
               publish_at: publishAt,
               is_published: false,
-            }).catch(() => {})
+            }).then(() => {}).catch(() => {})
             // 互动：随机点赞、评论
             const caseLikers = activeVus.filter(v => v.id !== user.id).sort(() => Math.random() - 0.5).slice(0, Math.floor(Math.random() * 3) + 1)
             for (const liker of caseLikers) {
@@ -380,7 +381,7 @@ async function executeStrategy(runId: string) {
                 user_id: liker.user_id,
                 target_type: "case",
                 target_id: dbResult.id,
-              }).catch(() => {})
+              }).then(() => {}).catch(() => {})
             }
             const caseCommenter = activeVus.filter(v => v.id !== user.id).sort(() => Math.random() - 0.5)[0]
             if (caseCommenter && Math.random() < 0.6) {
@@ -391,10 +392,10 @@ async function executeStrategy(runId: string) {
                 user_id: caseCommenter.user_id,
                 content: feedback[Math.floor(Math.random() * feedback.length)],
                 virtual_user_id: caseCommenter.id,
-              }).catch(() => {})
+              }).then(() => {}).catch(() => {})
             }
             succeeded.case++
-            await supabase.rpc("increment_vu_content", { p_id: user.id }).catch(() => {})
+            await supabase.rpc("increment_vu_content", { p_id: user.id }).then(() => {}).catch(() => {})
             await updateProgress("案例生成中")
             return { ok: true }
           } catch (err: any) {
@@ -430,7 +431,7 @@ async function executeStrategy(runId: string) {
               return { ok: false, error: error.message }
             }
             succeeded.question++
-            await supabase.rpc("increment_vu_content", { p_id: user.id }).catch(() => {})
+            await supabase.rpc("increment_vu_content", { p_id: user.id }).then(() => {}).catch(() => {})
             await updateProgress("提问生成中")
             return { ok: true }
           } catch (err: any) {
@@ -477,7 +478,7 @@ async function executeStrategy(runId: string) {
               return { ok: false, error: error.message }
             }
             succeeded.comment++
-            await supabase.rpc("increment_vu_content", { p_id: user.id }).catch(() => {})
+            await supabase.rpc("increment_vu_content", { p_id: user.id }).then(() => {}).catch(() => {})
             await updateProgress("评论生成中")
             return { ok: true }
           } catch (err: any) {

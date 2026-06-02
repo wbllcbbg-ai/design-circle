@@ -49,3 +49,6 @@ ALTER TABLE virtual_users ADD COLUMN IF NOT EXISTS content_profile JSONB DEFAULT
 -- retired = 退场，不再产出但保留历史内容
 ALTER TABLE virtual_users ADD COLUMN IF NOT EXISTS lifecycle_stage TEXT NOT NULL DEFAULT 'active'
   CHECK (lifecycle_stage IN ('new', 'active', 'steady', 'retired'));
+
+-- 案例 tags 列（与文章保持一致）
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';

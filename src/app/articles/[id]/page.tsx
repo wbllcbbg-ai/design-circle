@@ -237,6 +237,7 @@ export default function ArticleDetailPage({
                 <div className="w-7 h-7 rounded-full bg-gradient-to-br from-zinc-300 to-zinc-400 dark:from-zinc-600 dark:to-zinc-700 shrink-0 flex items-center justify-center text-[10px] text-white" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-medium text-zinc-500">{comment.user?.nickname || "用户"}</span>
                     <span className="text-xs text-zinc-400">{new Date(comment.created_at).toLocaleString()}</span>
                   </div>
                   <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">{comment.content}</p>
