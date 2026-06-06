@@ -42,8 +42,10 @@ export async function schedulePublishTime(
     return [s, e]
   }
 
-  // 3. 找出该虚拟人最近一条排期
-  const lastPost = todayPosts?.find(p => p.virtual_user_id === virtualUserId)
+  // 3. 找出该虚拟人最近一条排期（todayPosts 按 publish_at 升序排列，最后一条才是最近的）
+  const lastPost = todayPosts?.length
+    ? [...todayPosts].reverse().find(p => p.virtual_user_id === virtualUserId)
+    : undefined
   const lastHour = lastPost ? new Date(lastPost.publish_at).getHours() : -1
 
   // 4. 按 slots 顺序分配

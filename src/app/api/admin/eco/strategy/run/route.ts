@@ -16,6 +16,46 @@ const IMAGE_TIMEOUT = 25_000
 // 并发上限
 const CONCURRENCY_LIMIT = 3
 
+// 评论/回复文案池：按角色区分，追求真人感
+const COMMENT_POOLS: Record<string, string[]> = {
+  designer: [
+    "这个方案挺有想法，我在类似户型中用过这种布局，效果不错",
+    "从专业角度看这块确实值得投入，性价比很高",
+    "分享得很实在，建议再考虑一下采光的问题",
+    "同款方案做过几套，客户反馈都挺好",
+    "细节处理得很到位，学习了",
+    "这个思路可以，不过厨房动线可以再优化一下",
+    "实用为主的设计越来越受欢迎了",
+    "我也遇到过类似的情况，最后用了另一种方案解决的",
+  ],
+  owner: [
+    "我家就是这种风格，住了两年了还是很喜欢",
+    "正打算装修，这篇文章来得太及时了",
+    "有没有靠谱的师傅推荐？同在重庆",
+    "说的跟我家情况一模一样，收藏了",
+    "纠结了好久要不要这么做，看你说的放心了",
+    "预算有限，不知道这样搞下来要多少钱",
+    "这个方法好，回头我也试试",
+    "要是早点看到就好了，我家刚装完",
+    "同重庆！你找的哪家公司做的？",
+    "干货，先马住慢慢看",
+  ],
+}
+
+const REPLY_POOLS: Record<string, string[]> = {
+  designer: [
+    "补充一下，这个做法在重庆的湿度条件下要注意防潮",
+    "这个思路不错，我在实际项目中试过类似方案",
+    "说得对，另外要注意的是材料的选择也很关键",
+  ],
+  owner: [
+    "是的，我家也是这样做的",
+    "有道理，学到了",
+    "真的吗？那我下次也试试",
+    "收藏了，以后装修可以参考",
+  ],
+}
+
 // 带超时的 fetch 包装
 async function fetchWithTimeout(url: string, options: RequestInit & { timeout?: number } = {}): Promise<Response> {
   const { timeout = AI_CALL_TIMEOUT, ...fetchOpts } = options
@@ -149,8 +189,35 @@ async function executeStrategy(runId: string) {
       interval_hours: config.publish_rhythm?.interval_hours || 6,
     }
 
+    // 互动配置
+    const interactCfg = config.interaction || {}
+    const likeRange: [number, number] = interactCfg.like_range || [5, 15]
+    const commentDelay: [number, number] = interactCfg.comment_delay || [3, 8]
+    const replyRate: [number, number] = interactCfg.reply_rate || [20, 40]
+    const familiarRatio = interactCfg.familiar_ratio ?? 70
+    const realUserProbability = interactCfg.real_user_probability ?? 5
+    // 评论回复概率（均值/100），在互动模拟中共享使用
+    const commentChance = (replyRate[0] + replyRate[1]) / 2 / 100
+    // 评论 user_id：取 auth.users 中第一个管理员 ID（虚拟人没有 auth.users 记录，共用管理员）
+    let commentUserId = ""
+    try {
+      const { data: adminUsers } = await supabase.auth.admin.listUsers()
+      if (adminUsers?.users?.length) {
+        commentUserId = adminUsers.users[0].id
+      }
+    } catch {}
+
     // 虚拟人健康检查
     const vuConfig = config.virtual_user || {}
+
+    // 获取活跃虚拟人时排除已互动过的（模拟版"熟人圈"）
+    function pickRandom<T>(arr: T[], min = 1, max = 3): T[] {
+      const count = Math.min(arr.length, min + Math.floor(Math.random() * (max - min + 1)))
+      return arr.sort(() => Math.random() - 0.5).slice(0, count)
+    }
+    function pickOne<T>(arr: T[]): T | undefined {
+      return arr.length ? arr.sort(() => Math.random() - 0.5)[0] : undefined
+    }
     const activeThresholdDays = vuConfig.active_threshold_days || 7
     const minActive = vuConfig.min_active || 5
     const autoReplenish = vuConfig.auto_replenish !== false
@@ -192,14 +259,59 @@ async function executeStrategy(runId: string) {
             is_active: true,
             content_count: 0,
             last_active_at: new Date().toISOString(),
+            lifecycle_stage: "new",
           })),
         )
         .select("id, nickname, role, city, age_group, decoration_stage, active_periods, interest_tags, tone_style, speak_frequency, specialty")
     }
 
+    // 重新获取 active 列表（可能刚补充了新的）
+    const { data: refreshedVus } = await supabase
+      .from("virtual_users")
+      .select("*")
+      .eq("is_active", true)
+      .limit(50)
+    const allActive = refreshedVus || virtualUsers || []
+
+    // 生命周期演进：检查每个虚拟人的阶段是否需要推进
+    const now_ = new Date()
+    const thirtyDaysAgo = new Date(now_.getTime() - 30 * 86400000).toISOString()
+    const ninetyDaysAgo = new Date(now_.getTime() - 90 * 86400000).toISOString()
+    for (const vu of allActive) {
+      const currentStage = vu.lifecycle_stage || "new"
+      let newStage = currentStage
+
+      if (currentStage === "new" && (vu.content_count || 0) >= 5) {
+        newStage = "active"
+      }
+      if (currentStage === "active" && (vu.content_count || 0) >= 30) {
+        newStage = "steady"
+      }
+      if (currentStage === "active" && vu.last_active_at && vu.last_active_at < thirtyDaysAgo) {
+        newStage = "steady" // 长期不活跃 → 平稳期
+      }
+      if (currentStage === "steady" && (vu.content_count || 0) >= 60) {
+        newStage = "retired"
+      }
+      if (currentStage === "steady" && vu.last_active_at && vu.last_active_at < ninetyDaysAgo) {
+        newStage = "retired" // 太久不活跃 → 退场
+      }
+
+      if (newStage !== currentStage) {
+        await supabase.from("virtual_users").update({ lifecycle_stage: newStage }).eq("id", vu.id)
+      }
+    }
+    // 重新读取更新后的生命周期
+    const { data: evolvedVus } = await supabase
+      .from("virtual_users")
+      .select("*")
+      .eq("is_active", true)
+      .limit(50)
+    const evolvedList = evolvedVus || allActive
+
     // 按生命周期阶段过滤
     const lifecycleConfig = vuConfig.lifecycle_active || "daily"  // daily / 3perweek / 1perweek
-    const activeVus = (virtualUsers || []).filter((u) => {
+    const activeVus = (evolvedList || []).filter((u) => {
       if (u.lifecycle_stage === "retired") return false
       if (u.lifecycle_stage === "steady") {
         // 平稳期：每周最多 3 条，当前已经够数的不参与本轮
@@ -211,6 +323,42 @@ async function executeStrategy(runId: string) {
       }
       return true
     })
+
+    // 内容画像自动填充：对 content_profile 为空且有足够内容的虚拟人自动生成画像
+    const profilelessVus = activeVus.filter(v => !v.content_profile || Object.keys(v.content_profile).length === 0)
+    if (profilelessVus.length > 0) {
+      for (const vu of profilelessVus) {
+        try {
+          // 查内容量
+          const [{ count: artC }, { count: caseC }, { count: commentC }, { count: questionC }] = await Promise.all([
+            supabase.from("articles").select("id", { count: "exact", head: true }).eq("virtual_user_id", vu.id),
+            supabase.from("cases").select("id", { count: "exact", head: true }).eq("virtual_user_id", vu.id),
+            supabase.from("comments").select("id", { count: "exact", head: true }).eq("virtual_user_id", vu.id),
+            supabase.from("questions").select("id", { count: "exact", head: true }).eq("virtual_user_id", vu.id),
+          ])
+          const total = (artC || 0) + (caseC || 0) + (commentC || 0) + (questionC || 0)
+          if (total < 3) continue // 内容不够，不分析
+          // 取最近内容文本做词频分析
+          const [articles, cases, comments] = await Promise.all([
+            supabase.from("articles").select("title, content").eq("virtual_user_id", vu.id).limit(10),
+            supabase.from("cases").select("title, description, style").eq("virtual_user_id", vu.id).limit(5),
+            supabase.from("comments").select("content").eq("virtual_user_id", vu.id).limit(10),
+          ])
+          const allText = [
+            ...(articles.data || []).map((a: any) => `${a.title} ${a.content}`),
+            ...(cases.data || []).map((c: any) => `${c.title} ${c.description || ""} ${c.style || ""}`),
+            ...(comments.data || []).map((c: any) => c.content),
+          ].join(" ")
+          const keywords = extractKeywords(allText, 5)
+          const style = inferStyle(allText)
+          const profile = { topics: keywords, style, interactions: [] }
+          await supabase.from("virtual_users").update({ content_profile: profile }).eq("id", vu.id)
+          // 更新内存中的 activeVus
+          const idx = activeVus.findIndex(v => v.id === vu.id)
+          if (idx >= 0) activeVus[idx] = { ...activeVus[idx], content_profile: profile }
+        } catch {} // 单条失败不影响整体
+      }
+    }
 
     const designers = activeVus.filter((u) => u.role === "designer")
     const owners = activeVus.filter((u) => u.role === "owner")
@@ -262,14 +410,14 @@ async function executeStrategy(runId: string) {
               virtual_user_id: user.id,
               ai_generated_content: article.content,
               published_at: publishAt,
-              view_count: Math.floor(Math.random() * 200) + 10,
-              like_count: Math.floor(Math.random() * 30),
+              view_count: Math.floor(Math.random() * (likeRange[1] - likeRange[0] + 1)) + likeRange[0] * 10,
+              like_count: Math.floor(Math.random() * likeRange[1]) + likeRange[0],
             }).select("id").single()
             if (error) {
               failed.push({ type: "article", virtual_user: user.nickname, error: error.message })
               return { ok: false, error: error.message }
             }
-            // 写入排期表
+            // 写入排期表（生成即发布）
             await supabase.from("scheduled_posts").insert({
               target_type: "article",
               target_id: dbResult.id,
@@ -278,28 +426,62 @@ async function executeStrategy(runId: string) {
               display_title: article.title,
               display_virtual_user_name: user.nickname,
               publish_at: publishAt,
-              is_published: false,
+              is_published: true,
             }).then(() => {}).catch(() => {})
             // 互动：随机选取其他虚拟人为这篇文章点赞、评论
-            const likers = activeVus.filter(v => v.id !== user.id).sort(() => Math.random() - 0.5).slice(0, Math.floor(Math.random() * 3) + 1)
+            const otherVus = activeVus.filter(v => v.id !== user.id)
+            const likers = pickRandom(otherVus, likeRange[0], likeRange[1])
             for (const liker of likers) {
               await supabase.from("likes").insert({
                 user_id: liker.user_id,
                 target_type: "article",
                 target_id: dbResult.id,
-              }).then(() => {}).catch(() => {}) // 静默失败
+              }).then(() => {}).catch(() => {})
             }
             // 加一条评论
-            const commenter = activeVus.filter(v => v.id !== user.id).sort(() => Math.random() - 0.5)[0]
-            if (commenter && Math.random() < 0.6) {
-              const feedback = ["说得好，学习了！", "讲得很实在", "收藏了，谢谢分享", "很有参考价值", "重庆这边确实是这样"]
+            const commenter = pickOne(otherVus)
+            if (commenter && Math.random() < commentChance) {
+              const commentPool = COMMENT_POOLS[commenter.role] || COMMENT_POOLS.owner
               await supabase.from("comments").insert({
                 target_type: "article",
                 target_id: dbResult.id,
-                user_id: commenter.user_id,
-                content: feedback[Math.floor(Math.random() * feedback.length)],
+                user_id: commentUserId || commenter.user_id,
+                content: commentPool[Math.floor(Math.random() * commentPool.length)],
                 virtual_user_id: commenter.id,
               }).then(() => {}).catch(() => {})
+            }
+            // 回复模拟：随机选取该内容下一条已有评论，由另一个虚拟人回复
+            const { data: existingComments } = await supabase
+              .from("comments")
+              .select("id, user_id")
+              .eq("target_type", "article")
+              .eq("target_id", dbResult.id)
+              .is("parent_id", null)
+              .limit(3)
+            if (existingComments?.length && Math.random() < commentChance) {
+              const replyWriter = pickOne(otherVus)
+              if (replyWriter) {
+                const targetComment = existingComments[Math.floor(Math.random() * existingComments.length)]
+                await supabase.from("comments").insert({
+                  target_type: "article",
+                  target_id: dbResult.id,
+                  parent_id: targetComment.id,
+                  user_id: commentUserId || replyWriter.user_id,
+                  content: ["确实", "有道理", "说的对", "学习了", "我也这样觉得"][Math.floor(Math.random() * 5)],
+                  virtual_user_id: replyWriter.id,
+                }).then(() => {}).catch(() => {})
+              }
+            }
+            // 踩模拟：随机给这条内容一个踩
+            if (otherVus.length > 2) {
+              const disliker = otherVus[Math.floor(Math.random() * otherVus.length)]
+              if (disliker && Math.random() < 0.15) { // 15% 概率有踩
+                await supabase.from("dislikes").insert({
+                  user_id: commentUserId || disliker.user_id,
+                  target_type: "article",
+                  target_id: dbResult.id,
+                }).then(() => {}).catch(() => {})
+              }
             }
             succeeded.article++
             // 更新虚拟人内容计数和活跃时间
@@ -357,13 +539,13 @@ async function executeStrategy(runId: string) {
               virtual_user_id: user.id,
               is_published: true,
               published_at: publishAt,
-              view_count: Math.floor(Math.random() * 500) + 20,
+              view_count: Math.floor(Math.random() * (likeRange[1] - likeRange[0] + 1)) + likeRange[0] * 10,
             }).select("id").single()
             if (error) {
               failed.push({ type: "case", virtual_user: user.nickname, error: error.message })
               return { ok: false, error: error.message }
             }
-            // 写入排期表
+            // 写入排期表（生成即发布）
             await supabase.from("scheduled_posts").insert({
               target_type: "case",
               target_id: dbResult.id,
@@ -372,10 +554,11 @@ async function executeStrategy(runId: string) {
               display_title: caseItem.title,
               display_virtual_user_name: user.nickname,
               publish_at: publishAt,
-              is_published: false,
+              is_published: true,
             }).then(() => {}).catch(() => {})
             // 互动：随机点赞、评论
-            const caseLikers = activeVus.filter(v => v.id !== user.id).sort(() => Math.random() - 0.5).slice(0, Math.floor(Math.random() * 3) + 1)
+            const otherCaseVus = activeVus.filter(v => v.id !== user.id)
+            const caseLikers = pickRandom(otherCaseVus, likeRange[0], likeRange[1])
             for (const liker of caseLikers) {
               await supabase.from("likes").insert({
                 user_id: liker.user_id,
@@ -383,16 +566,49 @@ async function executeStrategy(runId: string) {
                 target_id: dbResult.id,
               }).then(() => {}).catch(() => {})
             }
-            const caseCommenter = activeVus.filter(v => v.id !== user.id).sort(() => Math.random() - 0.5)[0]
-            if (caseCommenter && Math.random() < 0.6) {
-              const feedback = ["设计很棒", "这个方案不错", "收藏了参考", "风格很喜欢", "实用性强"]
+            const caseCommenter = pickOne(otherCaseVus)
+            if (caseCommenter && Math.random() < commentChance) {
+              const commentPool = COMMENT_POOLS[caseCommenter.role] || COMMENT_POOLS.owner
               await supabase.from("comments").insert({
                 target_type: "case",
                 target_id: dbResult.id,
-                user_id: caseCommenter.user_id,
-                content: feedback[Math.floor(Math.random() * feedback.length)],
+                user_id: commentUserId || caseCommenter.user_id,
+                content: commentPool[Math.floor(Math.random() * commentPool.length)],
                 virtual_user_id: caseCommenter.id,
               }).then(() => {}).catch(() => {})
+            }
+            // 回复模拟：随机选取该内容下一条已有评论，由另一个虚拟人回复
+            const { data: caseComments } = await supabase
+              .from("comments")
+              .select("id")
+              .eq("target_type", "case")
+              .eq("target_id", dbResult.id)
+              .is("parent_id", null)
+              .limit(3)
+            if (caseComments?.length && Math.random() < commentChance) {
+              const replyWriter = pickOne(otherCaseVus)
+              if (replyWriter) {
+                const targetComment = caseComments[Math.floor(Math.random() * caseComments.length)]
+                await supabase.from("comments").insert({
+                  target_type: "case",
+                  target_id: dbResult.id,
+                  parent_id: targetComment.id,
+                  user_id: commentUserId || replyWriter.user_id,
+                  content: ["有道理", "这个方案可以", "收藏了", "谢谢分享"][Math.floor(Math.random() * 4)],
+                  virtual_user_id: replyWriter.id,
+                }).then(() => {}).catch(() => {})
+              }
+            }
+            // 踩模拟：随机给这条内容一个踩
+            if (otherCaseVus.length > 2) {
+              const disliker = otherCaseVus[Math.floor(Math.random() * otherCaseVus.length)]
+              if (disliker && Math.random() < 0.15) {
+                await supabase.from("dislikes").insert({
+                  user_id: commentUserId || disliker.user_id,
+                  target_type: "case",
+                  target_id: dbResult.id,
+                }).then(() => {}).catch(() => {})
+              }
             }
             succeeded.case++
             await supabase.rpc("increment_vu_content", { p_id: user.id }).then(() => {}).catch(() => {})
@@ -424,7 +640,7 @@ async function executeStrategy(runId: string) {
               content: question.content,
               category: question.category,
               virtual_user_id: user.id,
-              created_at: await schedulePublishTime(supabase, scheduleConfig, user.id),
+              created_at: new Date().toISOString(),
             })
             if (error) {
               failed.push({ type: "question", virtual_user: user.nickname, error: error.message })
@@ -444,19 +660,19 @@ async function executeStrategy(runId: string) {
 
     // --- 并行生成评论 ---
     const [articlesRes, casesRes] = await Promise.all([
-      supabase.from("articles").select("id, title").is("virtual_user_id", null).limit(10),
-      supabase.from("cases").select("id, title").is("virtual_user_id", null).limit(10),
+      supabase.from("articles").select("id, title").limit(20),
+      supabase.from("cases").select("id, title").limit(20),
     ])
     const commentTargets = [
       ...(articlesRes.data || []).map(a => ({ type: "article", id: a.id, title: a.title })),
       ...(casesRes.data || []).map(c => ({ type: "case", id: c.id, title: c.title })),
     ]
-    const commentCount = Math.min(quota.comment || 0, virtualUsers.length, commentTargets.length)
+    const commentCount = Math.min(quota.comment || 0, evolvedList.length, commentTargets.length)
     planned.comment = commentCount
 
     if (commentCount > 0) {
       const commentItems = Array.from({ length: commentCount }, (_, i) => ({
-        user: virtualUsers[i % virtualUsers.length],
+        user: evolvedList[i % evolvedList.length],
         target: commentTargets[i % commentTargets.length],
       }))
 
@@ -468,10 +684,10 @@ async function executeStrategy(runId: string) {
             const { error } = await supabase.from("comments").insert({
               target_type: target.type,
               target_id: target.id,
-              user_id: user.user_id,
+              user_id: commentUserId || user.user_id,
               content: comment.content,
               virtual_user_id: user.id,
-              created_at: await schedulePublishTime(supabase, scheduleConfig, user.id),
+              created_at: new Date().toISOString(),
             })
             if (error) {
               failed.push({ type: "comment", virtual_user: user.nickname, error: error.message })
@@ -488,6 +704,37 @@ async function executeStrategy(runId: string) {
         },
       )
     }
+
+    // --- 回复模拟：从已有评论中随机选一些回复 ---
+    const replyCount = Math.min(3, evolvedList.length)
+    if (replyCount > 0) {
+      const { data: replyTargets } = await supabase
+        .from("comments")
+        .select("id, target_type, target_id")
+        .is("parent_id", null)
+        .limit(20)
+      if (replyTargets?.length) {
+        const repliers = evolvedList.sort(() => Math.random() - 0.5).slice(0, replyCount)
+        for (const replier of repliers) {
+          try {
+            const target = replyTargets[Math.floor(Math.random() * replyTargets.length)]
+            // 根据角色区分回复文案
+            const replyPool = REPLY_POOLS[replier.role] || REPLY_POOLS.owner
+            await supabase.from("comments").insert({
+              target_type: target.target_type,
+              target_id: target.target_id,
+              user_id: commentUserId || replier.user_id,
+              content: replyPool[Math.floor(Math.random() * replyPool.length)],
+              virtual_user_id: replier.id,
+              parent_id: target.id,
+            }).then(() => {}).catch(() => {})
+          } catch {}
+        }
+      }
+    }
+
+    // 异步生成内容快照（不影响主流程）
+    generateSnapshot(supabase).catch(() => {})
 
     // 更新最终执行日志
     await supabase
@@ -534,4 +781,94 @@ async function loadRuntimeConfig() {
   } catch (err) {
     console.warn("loadRuntimeConfig failed:", err)
   }
+}
+
+// --- 内容画像辅助函数（与 profile API route 同步） ---
+const STOP_WORDS = new Set([
+  "的", "了", "在", "是", "我", "有", "和", "就", "不", "人", "都", "一",
+  "一个", "上", "也", "很", "到", "说", "要", "去", "你", "会", "着",
+  "没有", "看", "好", "自己", "这", "他", "她", "它", "们", "那", "些",
+  "吧", "吗", "啊", "呢", "哦", "嘛", "得", "地", "与", "对", "为",
+  "能", "可以", "还是", "这个", "那个", "什么", "怎么", "如何", "因为",
+  "所以", "但是", "而且", "然后", "虽然", "如果", "不仅", "除了",
+  "装修", "设计", "风格", "空间", "房间", "客厅", "卧室", "厨房",
+  "卫生间", "阳台", "我们", "他们", "已经", "可以", "没有", "比较",
+  "就是", "觉得", "真的", "但是", "因为", "所以", "这个", "时候",
+])
+
+function extractKeywords(text: string, count: number): string[] {
+  const words: string[] = []
+  const regex = /[一-鿿]{2,4}/g
+  let match
+  while ((match = regex.exec(text)) !== null) {
+    const w = match[0]
+    if (!STOP_WORDS.has(w)) words.push(w)
+  }
+  const freq: Record<string, number> = {}
+  for (const w of words) freq[w] = (freq[w] || 0) + 1
+  return Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, count).map(([word]) => word)
+}
+
+function inferStyle(text: string): string {
+  const casualScore = ["哈", "啦", "哟", "呗", "嘛", "呢", "吧", "啊", "哦"].filter(c => text.includes(c)).length
+  const enthusiasticScore = ["!", "！", "超级", "非常", "太", "绝了", "真的", "推荐"].filter(c => text.includes(c)).length
+  const professionalScore = ["指标", "参数", "规范", "标准", "流程", "原理", "方案", "系统"].filter(c => text.includes(c)).length
+  if (professionalScore > casualScore && professionalScore > enthusiasticScore) return "专业严谨"
+  if (enthusiasticScore > casualScore) return "热情积极"
+  if (casualScore > 0) return "口语化"
+  return "简洁直接"
+}
+
+
+// 异步生成内容快照
+async function generateSnapshot(supabase: ReturnType<typeof createDirectClient>) {
+  const today = new Date().toISOString().slice(0, 10)
+  const todayStart = today + 'T00:00:00Z'
+  const todayEnd = today + 'T23:59:59Z'
+
+  const [
+    { count: totalArticles }, { count: totalCases },
+    { count: totalComments }, { count: totalQuestions },
+    { count: totalVus }, { count: totalLikes }, { count: totalDislikes },
+    { count: todayArticles }, { count: todayCases },
+    { count: todayComments }, { count: todayQuestions },
+  ] = await Promise.all([
+    supabase.from("articles").select("id", { count: "exact", head: true }),
+    supabase.from("cases").select("id", { count: "exact", head: true }),
+    supabase.from("comments").select("id", { count: "exact", head: true }),
+    supabase.from("questions").select("id", { count: "exact", head: true }),
+    supabase.from("virtual_users").select("id", { count: "exact", head: true }),
+    supabase.from("likes").select("id", { count: "exact", head: true }),
+    supabase.from("dislikes").select("id", { count: "exact", head: true }),
+    supabase.from("articles").select("id", { count: "exact", head: true }).gte("created_at", todayStart),
+    supabase.from("cases").select("id", { count: "exact", head: true }).gte("created_at", todayStart),
+    supabase.from("comments").select("id", { count: "exact", head: true }).gte("created_at", todayStart),
+    supabase.from("questions").select("id", { count: "exact", head: true }).gte("created_at", todayStart),
+  ])
+
+  // 时段分布
+  const hourly: Record<string, number> = {}
+  for (let h = 0; h < 24; h++) hourly[String(h).padStart(2, "0")] = 0
+  const addHour = (items: any[]) => { for (const i of items || []) { const hh = (i.created_at || "").slice(11, 13); if (hourly[hh] !== undefined) hourly[hh]++ } }
+  const [arts, cases, comments, questions] = await Promise.all([
+    supabase.from("articles").select("created_at").gte("created_at", todayStart).lte("created_at", todayEnd),
+    supabase.from("cases").select("created_at").gte("created_at", todayStart).lte("created_at", todayEnd),
+    supabase.from("comments").select("created_at").gte("created_at", todayStart).lte("created_at", todayEnd),
+    supabase.from("questions").select("created_at").gte("created_at", todayStart).lte("created_at", todayEnd),
+  ])
+  addHour(arts.data); addHour(cases.data); addHour(comments.data); addHour(questions.data)
+
+  const { data: todayActive } = await supabase.from("articles").select("virtual_user_id").gte("created_at", todayStart).not("virtual_user_id", "is", null)
+  const activeVus = new Set((todayActive || []).map((a: any) => a.virtual_user_id))
+
+  await supabase.from("content_analytics").upsert({
+    snapshot_date: today,
+    total_articles: totalArticles || 0, total_cases: totalCases || 0,
+    total_comments: totalComments || 0, total_questions: totalQuestions || 0,
+    new_articles: todayArticles || 0, new_cases: todayCases || 0,
+    new_comments: todayComments || 0, new_questions: todayQuestions || 0,
+    active_virtual_users: activeVus.size, total_virtual_users: totalVus || 0,
+    total_likes: totalLikes || 0, total_dislikes: totalDislikes || 0,
+    avg_view_count: 0, hourly_distribution: hourly, role_distribution: {},
+  }, { onConflict: "snapshot_date" })
 }

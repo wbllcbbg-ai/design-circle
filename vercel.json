@@ -4,7 +4,7 @@
   "framework": "nextjs",
   "crons": [
     {
-      "path": "/api/admin/eco/strategy/run",
+      "path": "/api/cron/publish",
       "schedule": "0 8 * * *"
     }
   ]

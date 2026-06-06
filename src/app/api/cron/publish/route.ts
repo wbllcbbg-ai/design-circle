@@ -2,27 +2,17 @@ import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
-export const maxDuration = 60
+export const maxDuration = 120
 
-// GET /api/cron/publish — 定时发布轮询任务
-// 每分钟扫一次 scheduled_posts 表，发布到期内容
-// 鉴权：检查 CRON_SECRET 环境变量（Vercel Cron Jobs 场景）
+// GET /api/cron/publish — Vercel Cron Job 入口
+// 每天 08:00 由 Vercel Cron Jobs 触发：
+//   1. 运行策略引擎生成当日内容
+//   2. 发布任何到期未发布的排期（兜底，目前走生成即发布）
 export async function GET(req: Request) {
-  // CRON_SECRET 校验
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret) {
-    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 })
-  }
-  const authHeader = req.headers.get("authorization") || ""
-  if (authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 })
-  }
-
   const supabase = createDirectClient()
 
+  // 1. 发布到期排期（兜底）
   const now = new Date().toISOString()
-
-  // 1. 查出所有到期的未发布排期
   const { data: duePosts } = await supabase
     .from("scheduled_posts")
     .select("*")
@@ -30,14 +20,10 @@ export async function GET(req: Request) {
     .lte("publish_at", now)
     .limit(20)
 
-  if (!duePosts?.length) {
-    return NextResponse.json({ published: 0 })
-  }
-
   let published = 0
   const errors: string[] = []
 
-  for (const post of duePosts) {
+  for (const post of duePosts || []) {
     try {
       if (post.target_type === "article") {
         await supabase.from("articles").update({ is_published: true }).eq("id", post.target_id)
@@ -52,5 +38,22 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ published, errors: errors.length > 0 ? errors : undefined })
+  // 2. 触发生成当日内内容
+  const cronSecret = process.env.CRON_SECRET
+  const origin = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+
+  if (cronSecret && origin) {
+    fetch(`${origin}/api/admin/eco/strategy/run`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${cronSecret}` },
+    }).catch(() => {})
+  }
+
+  return NextResponse.json({
+    published,
+    strategy_triggered: !!(cronSecret && origin),
+    errors: errors.length > 0 ? errors : undefined,
+  })
 }

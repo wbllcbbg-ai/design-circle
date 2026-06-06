@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react"
 import { ROLE_LABELS } from "@/lib/types"
 
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"))
+const HEAT_COLORS = ["bg-zinc-50", "bg-blue-100", "bg-blue-200", "bg-blue-300", "bg-blue-400", "bg-blue-500"]
+
 const ROLE_BADGES: Record<string, string> = {
   homeowner: "🏠 " + ROLE_LABELS.homeowner,
   designer: "🎨 " + ROLE_LABELS.designer,
@@ -13,22 +16,27 @@ const ROLE_BADGES: Record<string, string> = {
 export default function EcoPage() {
   const [data, setData] = useState<any>(null)
   const [scheduled, setScheduled] = useState<any[]>([])
+  const [analyticsDays, setAnalyticsDays] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [overviewRes, scheduledRes] = await Promise.all([
+        const [overviewRes, scheduledRes, analyticsRes] = await Promise.all([
           fetch("/api/admin/eco/overview"),
           fetch("/api/admin/scheduled?limit=24"),
+          fetch("/api/admin/eco/analytics"),
         ])
         const json = await overviewRes.json()
         const sched = await scheduledRes.json()
+        const analytics = await analyticsRes.json()
         setData(json)
         setScheduled(sched.scheduled ?? [])
+        setAnalyticsDays(analytics.days ?? [])
       } catch {
         setData({ overview: {}, ratios: {}, virtualUsers: [], alerts: { blocking: [], warning: [] }, recentLogs: [] })
         setScheduled([])
+        setAnalyticsDays([])
       }
       setLoading(false)
     }
@@ -39,7 +47,7 @@ export default function EcoPage() {
     return <div className="flex items-center justify-center py-16 text-sm text-zinc-400">加载中...</div>
   }
 
-  const { overview, ratios, virtualUsers, alerts, recentLogs } = data || {}
+  const { overview, ratios, virtualUsers, alerts, recentLogs, recommendedSlots } = data || {}
   const totalContents = overview?.totalContents || 0
   const todayTotal = overview?.todayTotal || 0
 
@@ -56,6 +64,47 @@ export default function EcoPage() {
         <StatCard label="今日产出" value={todayTotal} color="text-purple-600" />
         <StatCard label="正在排期" value={`${overview?.pendingScheduled || 0} 条`} color="text-amber-600" />
       </div>
+
+      {/* 📊 时段热力图 */}
+      {analyticsDays.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-zinc-500 mb-2">📊 时段产出热力图</p>
+          <div className="overflow-x-auto">
+            <div className="min-w-[400px]">
+              <div className="flex gap-0.5 mb-1">
+                <div className="w-14 shrink-0" />
+                {HOURS.map((h) => (
+                  <div key={h} className="flex-1 text-[9px] text-zinc-400 text-center">{h}</div>
+                ))}
+              </div>
+              {analyticsDays.slice(-7).map((day: any) => {
+                const dist = day.hourly_distribution || {}
+                const maxVal = Math.max(...Object.values(dist).map(Number), 1)
+                return (
+                  <div key={day.snapshot_date} className="flex gap-0.5 items-center mb-0.5">
+                    <div className="w-14 shrink-0 text-[10px] text-zinc-500 truncate">
+                      {day.snapshot_date?.slice(5)}
+                    </div>
+                    {HOURS.map((h) => {
+                      const val = (dist[h] || 0) as number
+                      const intensity = val > 0 ? Math.min(Math.ceil((val / maxVal) * (HEAT_COLORS.length - 1)), HEAT_COLORS.length - 1) : 0
+                      return (
+                        <div
+                          key={h}
+                          className={`flex-1 h-6 rounded-sm flex items-center justify-center text-[8px] ${HEAT_COLORS[intensity]} ${val > 0 ? "text-blue-900" : "text-zinc-300"}`}
+                          title={`${h}:00 - ${val} 条`}
+                        >
+                          {val > 0 ? val : ""}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 🔴 阻塞告警 */}
       {alerts?.blocking?.length > 0 && (
@@ -77,6 +126,25 @@ export default function EcoPage() {
             {alerts.warning.map((a: any) => (
               <AlertCard key={a.id} alert={a} color="amber" />
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* 💡 推荐发布时段 */}
+      {recommendedSlots?.slots?.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-zinc-500 mb-2">💡 推荐发布时段（基于历史数据）</p>
+          <div className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl">
+            <div className="flex items-center gap-3 mb-2">
+              {recommendedSlots.slots.map((slot: string) => (
+                <span key={slot} className="px-2.5 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-mono">
+                  {slot.replace("-", ":00 - ")}:00
+                </span>
+              ))}
+            </div>
+            <p className="text-[10px] text-zinc-400">
+              基于近 7 天产出数据，这些时段用户互动最活跃
+            </p>
           </div>
         </div>
       )}
@@ -122,20 +190,10 @@ export default function EcoPage() {
         </div>
       )}
 
-      {/* 发布时间线 */}
+      {/* 发布时间线（只展示，引擎自动按 slots 分散） */}
       {scheduled.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-medium text-zinc-500">发布时间线（未来 24 小时）</p>
-            {scheduled.length > 5 && (
-              <button
-                onClick={() => fetch("/api/admin/scheduled/auto-spread", { method: "POST" }).then(() => window.location.reload())}
-                className="text-[10px] px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
-              >
-                ⚠️ {scheduled.length}条排期中 · 自动分散
-              </button>
-            )}
-          </div>
+          <p className="text-xs font-medium text-zinc-500 mb-2">未来 24 小时排期计划（{scheduled.length} 条）</p>
           <div className="space-y-1">
             {scheduled.slice(0, 8).map((item: any) => (
               <div key={item.id} className="flex items-center gap-2 px-3 py-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg text-xs">

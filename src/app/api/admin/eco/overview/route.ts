@@ -110,5 +110,79 @@ export async function GET() {
       warning: filteredWarning,
     },
     recentLogs: logs,
+    recommendedSlots: await computeRecommendedSlots(supabase),
   })
+}
+
+
+// 基于近 7 天 analytics 数据推荐最优 slots
+async function computeRecommendedSlots(supabase: any) {
+  try {
+    const { data: snapshots } = await supabase
+      .from("content_analytics")
+      .select("hourly_distribution")
+      .order("snapshot_date", { ascending: false })
+      .limit(7)
+
+    if (!snapshots?.length) return null
+
+    // 聚合所有天的时段数据
+    const totalByHour: Record<string, number> = {}
+    let grandTotal = 0
+    for (const snap of snapshots) {
+      const dist = snap.hourly_distribution || {}
+      for (let h = 0; h < 24; h++) {
+        const hh = String(h).padStart(2, "0")
+        totalByHour[hh] = (totalByHour[hh] || 0) + (dist[hh] || 0)
+      }
+    }
+    grandTotal = Object.values(totalByHour).reduce((a, b) => a + b, 0)
+    if (grandTotal === 0) return null
+
+    // 按产出排序，取前 3 个时段块（连续 2h+ 的区间）
+    const sorted = Object.entries(totalByHour)
+      .map(([hour, count]) => ({ hour: parseInt(hour), count }))
+      .sort((a, b) => b.count - a.count)
+
+    // 找热点时段：产出最高的连续区间
+    const topHours = new Set(sorted.slice(0, 6).map(s => s.hour))
+    const ranges: { start: number; end: number; count: number }[] = []
+    let current: { start: number; end: number; count: number } | null = null
+
+    for (let h = 0; h < 24; h++) {
+      if (topHours.has(h)) {
+        if (!current) {
+          current = { start: h, end: h + 1, count: totalByHour[String(h).padStart(2, "0")] || 0 }
+        } else {
+          current.end = h + 1
+          current.count += totalByHour[String(h).padStart(2, "0")] || 0
+        }
+      } else {
+        if (current && current.end - current.start >= 2) {
+          ranges.push(current)
+        }
+        current = null
+      }
+    }
+    if (current && current.end - current.start >= 2) {
+      ranges.push(current)
+    }
+
+    // 取最多 3 个时段区间
+    const topRanges = ranges.sort((a, b) => b.count - a.count).slice(0, 3)
+    const recommendedSlots = topRanges.map(r => {
+      const pad = (n: number) => String(n).padStart(2, "0")
+      return pad(r.start) + "-" + pad(r.end)
+    })
+
+    return {
+      slots: recommendedSlots,
+      byHour: Object.entries(totalByHour)
+        .map(([hour, count]) => ({ hour, count }))
+        .sort((a, b) => parseInt(a.hour) - parseInt(b.hour)),
+      currentConfig: null, // 前端可自行获取当前配置对比
+    }
+  } catch {
+    return null
+  }
 }

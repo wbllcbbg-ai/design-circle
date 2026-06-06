@@ -1,6 +1,23 @@
 import { searchImages, getSearchQuery } from "./unsplash"
 import { generateImages, getImagePrompt, setWanxiangKey } from "./wanxiang"
 
+// 安全 JSON 解析：从文本中提取 JSON 对象，清理常见非法字符
+function safeParse<T>(text: string, fallback: T): T {
+  try {
+    const raw = text.match(/\{[\s\S]*\}/)?.[0]
+    if (!raw) return fallback
+    // 清理 trailing comma 和注释
+    const cleaned = raw
+      .replace(/,\s*}/g, "}")
+      .replace(/,\s*\]/g, "]")
+      .replace(/\/\/.*$/gm, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+    return JSON.parse(cleaned)
+  } catch {
+    return fallback
+  }
+}
+
 let _wanxiangEnabled = false
 
 export function setWanxiangEnabled(enabled: boolean) {
@@ -188,20 +205,17 @@ export async function generateArticle(user: VirtualUser, history: HistoryItem[])
   )
 
   const raw = await callAI(prompt, 0.8, 2048)
-  const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}")
+  const json = safeParse(raw, { title: "", summary: "", content: "" })
 
   let cover_url = ""
-
   if (isWanxiangEnabled()) {
-    const prompt = getImagePrompt("cover", json.style)
-    const images = await generateImages(prompt)
-    cover_url = images[0] || ""
+    const imgPrompt = getImagePrompt("cover", json.style || "")
+    const imgs = await generateImages(imgPrompt)
+    cover_url = imgs[0] || ""
   }
-
   if (!cover_url) {
-    const imageQuery = getSearchQuery("article")
-    const images = await searchImages(imageQuery)
-    cover_url = images[0] || ""
+    const imgs = await searchImages(getSearchQuery("article"))
+    cover_url = imgs[0] || ""
   }
 
   return {
@@ -223,7 +237,7 @@ export async function generateCase(user: VirtualUser, history: HistoryItem[]) {
   )
 
   const raw = await callAI(prompt, 0.8, 1024)
-  const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}")
+  const json = safeParse(raw, { title: "", style: "", area: 80, budget: 100000, description: "" })
 
   let images: string[] = []
 
@@ -254,7 +268,7 @@ export async function generateQuestion(user: VirtualUser, history: HistoryItem[]
   )
 
   const raw = await callAI(prompt, 0.8, 1024)
-  const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}")
+  const json = safeParse(raw, { title: "", content: "", category: "" })
 
   return {
     title: json.title || "装修求助",
@@ -274,7 +288,7 @@ export async function generateComment(user: VirtualUser, history: HistoryItem[],
   )
 
   const raw = await callAI(prompt, 0.7, 512)
-  const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}")
+  const json = safeParse(raw, { content: "" })
 
   return { content: json.content || "说得好，学习了！" }
 }
@@ -288,7 +302,7 @@ export async function generateReview(user: VirtualUser, history: HistoryItem[], 
   )
 
   const raw = await callAI(prompt, 0.7, 512)
-  const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}")
+  const json = safeParse(raw, { rating: 5, design_score: 5, construction_score: 4, service_score: 5, content: "" })
 
   return {
     rating: json.rating || 5,
