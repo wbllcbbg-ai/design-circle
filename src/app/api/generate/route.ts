@@ -21,7 +21,7 @@ const TOPICS = [
 
 // 手动创建文章（不需要AI）
 export async function PUT(req: Request) {
-  const guard = await requireAdmin()
+  const guard = await requireAdmin(req)
   if (guard) return guard
   const body = await req.json()
   const { title, summary, content, category } = body
@@ -48,8 +48,8 @@ export async function PUT(req: Request) {
 }
 
 // AI一键生成
-export async function POST() {
-  const guard = await requireAdmin()
+export async function POST(req: Request) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
   const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)]
 

@@ -34,7 +34,7 @@ export async function POST(req: Request) {
 
 // 审核接口 (管理员)
 export async function PUT(req: Request) {
-  const adminAuth = await requireAdmin()
+  const adminAuth = await requireAdmin(req)
   if (adminAuth) return adminAuth
 
   const supabase = createDirectClient()

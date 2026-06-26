@@ -98,7 +98,20 @@ export async function POST(req: Request) {
       ["新中式", "茶室", "庭院"],
     ]
 
+    // 查询现有昵称，避免 UNIQUE 约束冲突（virtual_users.nickname 有唯一约束）
+    const { data: existingNicks } = await supabase
+      .from("virtual_users")
+      .select("nickname")
+    const existingSet = new Set((existingNicks || []).map((v: { nickname: string }) => v.nickname))
+
+    // 重名处理：加随机后缀
     const inserts = nicknames.slice(0, generateCount).map((nickname: string, i: number) => {
+      let finalNick = nickname
+      // 若重名，加 2 位随机后缀直到唯一
+      while (existingSet.has(finalNick)) {
+        finalNick = nickname + Math.floor(Math.random() * 90 + 10)
+      }
+      existingSet.add(finalNick)  // 防止本批内重复
       const roleIdx = i % allRoles.length
       const role = allRoles[roleIdx]
       const ageGroup = ageGroups[Math.floor(Math.random() * ageGroups.length)]
@@ -107,7 +120,7 @@ export async function POST(req: Request) {
       const periods = periodOptions[Math.floor(Math.random() * periodOptions.length)]
       const tags = tagPool[Math.floor(Math.random() * tagPool.length)]
       return {
-        nickname,
+        nickname: finalNick,
         role,
         city: "重庆",
         age_group: role === "worker" ? null : ageGroup,
