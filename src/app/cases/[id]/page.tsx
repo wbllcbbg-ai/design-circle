@@ -17,6 +17,7 @@ type Comment = {
   parent_id: string | null
   created_at: string
   user_id: string
+  user?: { nickname: string; avatar_url: string | null }
 }
 
 type Review = {
@@ -73,19 +74,21 @@ export default function CaseDetailPage({
   const [newComment, setNewComment] = useState("")
   const [posting, setPosting] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [suppliers, setSuppliers] = useState<any[]>([])
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
   const [favorited, setFavorited] = useState(false)
   const supabase = createClient()
 
   const loadData = async () => {
-    const [caseRes, commentRes, userRes, likeRes, favRes, reviewRes] = await Promise.all([
+    const [caseRes, commentRes, userRes, likeRes, favRes, reviewRes, supplierRes] = await Promise.all([
       fetch(`/api/cases/${id}`).then((r) => r.json()),
       fetch(`/api/comments?target_type=case&target_id=${id}`).then((r) => r.json()),
       supabase.auth.getUser(),
       fetch(`/api/likes?target_type=case&target_id=${id}`).then((r) => r.json()),
       fetch(`/api/favorites?target_type=case&target_id=${id}`).then((r) => r.json()),
       fetch(`/api/cases/${id}/reviews`).then((r) => r.json()),
+      fetch(`/api/supplier-cases?case_id=${id}`).then((r) => r.json()).catch(() => ({ suppliers: [] })),
     ])
     setData(caseRes.case)
     setDesignerData(caseRes.designer)
@@ -95,6 +98,7 @@ export default function CaseDetailPage({
     setLiked(likeRes.liked)
     setLikeCount(likeRes.like_count)
     setFavorited(favRes.favorited)
+    setSuppliers(supplierRes.suppliers ?? [])
     setLoading(false)
 
     // 记录浏览历史
@@ -218,6 +222,37 @@ export default function CaseDetailPage({
         </div>
 
         <p className="text-sm text-zinc-700 dark:text-zinc-300 mt-3 leading-relaxed whitespace-pre-line">{data.description}</p>
+
+        {/* 本案使用的材料（材料商关联） */}
+        {suppliers.length > 0 && (
+          <div className="mt-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
+            <h3 className="text-sm font-medium mb-3">本案使用的材料</h3>
+            <div className="space-y-2">
+              {suppliers.map((sc: any) => {
+                const sup = sc.supplier
+                if (!sup) return null
+                return (
+                  <Link
+                    key={sc.id}
+                    href="#"
+                    className="flex items-center gap-3 p-2 bg-white dark:bg-zinc-900 rounded-lg"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-xs text-zinc-400 shrink-0">
+                      {sup.name?.[0] || "商"}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{sup.name}</p>
+                      {sup.brand && <p className="text-xs text-zinc-400 truncate">{sup.brand}</p>}
+                    </div>
+                    {sc.product_info && (
+                      <span className="text-xs text-zinc-400 truncate max-w-[40%]">{sc.product_info}</span>
+                    )}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* 评价摘要 */}
         <div className="mt-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">

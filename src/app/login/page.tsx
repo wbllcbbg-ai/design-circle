@@ -41,7 +41,14 @@ export default function LoginPage() {
             setError(data.error)
           }
         } else {
-          window.location.href = "/"
+          // 按角色跳转工作台
+          const role = data.user?.role
+          const target =
+            role === "admin" ? "/admin" :
+            role === "supplier" || role === "contractor" || role === "inspector" ? "/merchant" :
+            role === "designer" || role === "company" || role === "worker" ? "/dashboard" :
+            "/"
+          window.location.href = target
         }
       } catch (e: any) {
         setError("网络错误，请稍后重试")
@@ -171,7 +178,7 @@ export default function LoginPage() {
             {mode === "login" ? (
               <>还没有账号？<button type="button" onClick={() => setMode("register")} className="underline">注册</button>
               <span className="mx-2">·</span>
-              <a href="https://rlbxldrtxbyrrtekfims.supabase.co/auth/v1/recover" target="_blank" rel="noopener noreferrer" className="underline">忘记密码</a></>
+              <a href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/recover`} target="_blank" rel="noopener noreferrer" className="underline">忘记密码</a></>
             ) : (
               <>已有账号？<button type="button" onClick={() => setMode("login")} className="underline">登录</button></>
             )}

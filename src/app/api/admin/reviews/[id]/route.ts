@@ -17,6 +17,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   const supabase = createDirectClient()
+
+  // 先取旧状态，判断之前是否已 approved（决定是否发通知，避免重复）
+  const { data: oldReview } = await supabase
+    .from("reviews")
+    .select("review_status")
+    .eq("id", id)
+    .maybeSingle()
+  const wasApproved = oldReview?.review_status === "approved"
+
   const { data, error } = await supabase
     .from("reviews")
     .update({ review_status: status, reviewed_at: new Date().toISOString() })
@@ -26,8 +35,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // 审批通过时发通知
-  if (status === "approved" && data.designer) {
+  // 审批通过时发通知 —— 仅当之前不是 approved（避免与业主提交时的自动通知重复）
+  if (status === "approved" && !wasApproved && data.designer) {
     const { data: actor } = await supabase.from("users").select("nickname").eq("id", data.user_id).single()
     await supabase.from("notifications").insert({
       user_id: data.designer.user_id,

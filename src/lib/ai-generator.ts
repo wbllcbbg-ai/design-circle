@@ -209,7 +209,7 @@ export async function generateArticle(user: VirtualUser, history: HistoryItem[])
 
   let cover_url = ""
   if (isWanxiangEnabled()) {
-    const imgPrompt = getImagePrompt("cover", json.style || "")
+    const imgPrompt = getImagePrompt("cover", "")
     const imgs = await generateImages(imgPrompt)
     cover_url = imgs[0] || ""
   }

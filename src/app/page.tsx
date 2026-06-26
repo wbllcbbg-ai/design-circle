@@ -2,25 +2,10 @@ import { createDirectClient } from "@/lib/supabase/client"
 import { HomeFeed } from "@/components/home/HomeFeed"
 import { Search, Building2, Eye, Palette, ListTodo } from "lucide-react"
 import Link from "next/link"
-import type { FeedItem } from "@/lib/types"
+import type { FeedItem, DesignerInfo } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
-
-type FeedItem = {
-  type: "case" | "article"
-  id: string
-  title: string
-  likes: number
-  style: string
-  area: number
-  category: string
-  imgIndex: number
-  coverUrl: string | null
-  firstImage: string | null
-  designer_id: string | null
-  designer: DesignerInfo | null
-}
 
 const FUNC_ENTRIES = [
   { label: "整屋案例", to: "/cases", icon: Building2 },

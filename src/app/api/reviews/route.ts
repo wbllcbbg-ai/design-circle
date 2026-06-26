@@ -20,18 +20,45 @@ function aiReview(content: string, rating: number): { status: string; confidence
 }
 
 export async function POST(req: Request) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(req)
   if (typeof auth !== "string") return auth
   const userId = auth
 
   const body = await req.json()
-  const { designer_id, case_id, rating, design_score, construction_score, service_score, content, images, is_real_name, source } = body
+  const { designer_id, case_id, rating, design_score, construction_score, service_score, content, images, is_real_name, source, project_id } = body
 
   if (!designer_id || !rating || !content) {
     return NextResponse.json({ error: "设计师、评分和评价内容不能为空" }, { status: 400 })
   }
 
+  // 真实交易评价（source=transaction）必须有 project_id
+  const isTransactionReview = source === "transaction"
+  if (isTransactionReview && !project_id) {
+    return NextResponse.json({ error: "真实交易评价必须关联项目" }, { status: 400 })
+  }
+
   const supabase = createDirectClient()
+
+  // 真实交易评价：校验项目确实属于该业主且已竣工
+  if (isTransactionReview) {
+    const { data: project } = await supabase
+      .from("projects")
+      .select("id, user_id, designer_id, status")
+      .eq("id", project_id)
+      .maybeSingle()
+    if (!project) {
+      return NextResponse.json({ error: "项目不存在" }, { status: 400 })
+    }
+    if (project.user_id !== userId) {
+      return NextResponse.json({ error: "只有项目业主能评价" }, { status: 403 })
+    }
+    if (project.designer_id !== designer_id) {
+      return NextResponse.json({ error: "设计师与项目不匹配" }, { status: 400 })
+    }
+    if (project.status !== "completed") {
+      return NextResponse.json({ error: "项目未竣工，不可评价" }, { status: 400 })
+    }
+  }
 
   // AI 审核
   const { status: review_status, confidence: ai_confidence, flags } = aiReview(content, rating)
@@ -40,6 +67,7 @@ export async function POST(req: Request) {
     user_id: userId,
     designer_id,
     case_id: case_id || null,
+    project_id: project_id || null,            // 关联真实交易项目
     rating,
     design_score: design_score || rating,
     construction_score: construction_score || rating,
@@ -47,7 +75,7 @@ export async function POST(req: Request) {
     content,
     images: images || [],
     is_real_name: is_real_name || false,
-    is_verified: false,
+    is_verified: isTransactionReview,          // 真实交易评价标记已验证
     review_status,
     review_source: source || "browse",
     ai_confidence,
@@ -81,6 +109,27 @@ export async function POST(req: Request) {
         target_id: designer_id,
         content: `${actor?.nickname || "某人"} 评价了你的设计（${rating}分）：${snippet}`,
       })
+    }
+
+    // 真实交易评价通过 → 加/扣信用分（praise）
+    // 好评(≥4)+3，差评(≤2)-5，中评(3)不变
+    if (isTransactionReview) {
+      let praiseDelta = 0
+      if (rating >= 4) praiseDelta = 3
+      else if (rating <= 2) praiseDelta = -5
+      if (praiseDelta !== 0) {
+        await supabase.from("credit_records").insert({
+          designer_id,
+          delta: praiseDelta,
+          metric: "praise",
+          reason: praiseDelta > 0 ? "获得好评" : "获得差评",
+          related_project_id: project_id,
+        })
+        await supabase.rpc("increment_credit_score", {
+          p_designer_id: designer_id,
+          p_delta: praiseDelta,
+        })
+      }
     }
   }
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { Stars } from "@/components/ui/stars"
+import { SafeImage } from "@/components/ui/safe-image"
 
 type Designer = {
   id: string
@@ -51,6 +52,7 @@ export default function DashboardPage() {
   const [cases, setCases] = useState<Case[]>([])
   const [reviews, setReviews] = useState<Review[]>([])
   const [totalViews, setTotalViews] = useState(0)
+  const [projects, setProjects] = useState<{ id: string; title: string; progress: number }[]>([])
 
   useEffect(() => {
     const load = async () => {
@@ -75,6 +77,15 @@ export default function DashboardPage() {
       }
 
       setDesigner(designerData)
+
+      // 加载我的项目（设计师接单的项目）
+      try {
+        const projRes = await fetch(`/api/projects?as=designer&status=active`)
+        if (projRes.ok) {
+          const projData = await projRes.json()
+          setProjects(projData.projects ?? [])
+        }
+      } catch {}
 
       // 查询案例
       const { data: casesData } = await supabase
@@ -212,7 +223,35 @@ export default function DashboardPage() {
 
       {/* 邀请客户 */}
       <div className="px-4 pt-4">
-        <Link href="/invite" className="block p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-xl border border-amber-100 dark:border-amber-800/30">
+
+      {/* 我的项目（设计师接单） */}
+      {projects.length > 0 && (
+        <div className="pb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-medium">进行中的项目</h2>
+            <span className="text-xs text-zinc-400">{projects.length} 个</span>
+          </div>
+          <div className="space-y-2">
+            {projects.slice(0, 3).map((p) => (
+              <Link
+                key={p.id}
+                href={`/projects/${p.id}`}
+                className="block bg-white dark:bg-zinc-900 rounded-xl p-3 border border-zinc-100 dark:border-zinc-800"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium truncate">{p.title}</span>
+                  <span className="text-xs text-zinc-400 shrink-0 ml-2">{p.progress}%</span>
+                </div>
+                <div className="mt-2 h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-green-500" style={{ width: `${p.progress}%` }} />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <Link href="/invite" className="block p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-xl border border-amber-100 dark:border-amber-800/30">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-medium">邀请客户</h3>
@@ -249,7 +288,7 @@ export default function DashboardPage() {
             {cases.map((item) => (
               <Link
                 key={item.id}
-                href={`/cases/${item.id}/edit`}
+                href={`/cases/${item.id}`}
                 className="flex items-center gap-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50"
               >
                 <div
@@ -261,7 +300,7 @@ export default function DashboardPage() {
                   }}
                 >
                   {item.cover_url ? (
-                    <img src={item.cover_url} alt={item.title} className="w-full h-full object-cover rounded-lg" />
+                    <SafeImage src={item.cover_url} alt={item.title} className="w-full h-full object-cover rounded-lg" />
                   ) : (
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <rect x="3" y="3" width="18" height="18" rx="2" />

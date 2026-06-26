@@ -427,7 +427,7 @@ async function executeStrategy(runId: string) {
               display_virtual_user_name: user.nickname,
               publish_at: publishAt,
               is_published: true,
-            }).then(() => {}).catch(() => {})
+            }).then(() => {}, () => {})
             // 互动：随机选取其他虚拟人为这篇文章点赞、评论
             const otherVus = activeVus.filter(v => v.id !== user.id)
             const likers = pickRandom(otherVus, likeRange[0], likeRange[1])
@@ -436,7 +436,7 @@ async function executeStrategy(runId: string) {
                 user_id: liker.user_id,
                 target_type: "article",
                 target_id: dbResult.id,
-              }).then(() => {}).catch(() => {})
+              }).then(() => {}, () => {})
             }
             // 加一条评论
             const commenter = pickOne(otherVus)
@@ -448,7 +448,7 @@ async function executeStrategy(runId: string) {
                 user_id: commentUserId || commenter.user_id,
                 content: commentPool[Math.floor(Math.random() * commentPool.length)],
                 virtual_user_id: commenter.id,
-              }).then(() => {}).catch(() => {})
+              }).then(() => {}, () => {})
             }
             // 回复模拟：随机选取该内容下一条已有评论，由另一个虚拟人回复
             const { data: existingComments } = await supabase
@@ -469,7 +469,7 @@ async function executeStrategy(runId: string) {
                   user_id: commentUserId || replyWriter.user_id,
                   content: ["确实", "有道理", "说的对", "学习了", "我也这样觉得"][Math.floor(Math.random() * 5)],
                   virtual_user_id: replyWriter.id,
-                }).then(() => {}).catch(() => {})
+                }).then(() => {}, () => {})
               }
             }
             // 踩模拟：随机给这条内容一个踩
@@ -480,12 +480,12 @@ async function executeStrategy(runId: string) {
                   user_id: commentUserId || disliker.user_id,
                   target_type: "article",
                   target_id: dbResult.id,
-                }).then(() => {}).catch(() => {})
+                }).then(() => {}, () => {})
               }
             }
             succeeded.article++
             // 更新虚拟人内容计数和活跃时间
-            await supabase.rpc("increment_vu_content", { p_id: user.id }).then(() => {}).catch(() => {})
+            await supabase.rpc("increment_vu_content", { p_id: user.id }).then(() => {}, () => {})
             await updateProgress("文章生成中")
             return { ok: true }
           } catch (err: any) {
@@ -555,7 +555,7 @@ async function executeStrategy(runId: string) {
               display_virtual_user_name: user.nickname,
               publish_at: publishAt,
               is_published: true,
-            }).then(() => {}).catch(() => {})
+            }).then(() => {}, () => {})
             // 互动：随机点赞、评论
             const otherCaseVus = activeVus.filter(v => v.id !== user.id)
             const caseLikers = pickRandom(otherCaseVus, likeRange[0], likeRange[1])
@@ -564,7 +564,7 @@ async function executeStrategy(runId: string) {
                 user_id: liker.user_id,
                 target_type: "case",
                 target_id: dbResult.id,
-              }).then(() => {}).catch(() => {})
+              }).then(() => {}, () => {})
             }
             const caseCommenter = pickOne(otherCaseVus)
             if (caseCommenter && Math.random() < commentChance) {
@@ -575,7 +575,7 @@ async function executeStrategy(runId: string) {
                 user_id: commentUserId || caseCommenter.user_id,
                 content: commentPool[Math.floor(Math.random() * commentPool.length)],
                 virtual_user_id: caseCommenter.id,
-              }).then(() => {}).catch(() => {})
+              }).then(() => {}, () => {})
             }
             // 回复模拟：随机选取该内容下一条已有评论，由另一个虚拟人回复
             const { data: caseComments } = await supabase
@@ -596,7 +596,7 @@ async function executeStrategy(runId: string) {
                   user_id: commentUserId || replyWriter.user_id,
                   content: ["有道理", "这个方案可以", "收藏了", "谢谢分享"][Math.floor(Math.random() * 4)],
                   virtual_user_id: replyWriter.id,
-                }).then(() => {}).catch(() => {})
+                }).then(() => {}, () => {})
               }
             }
             // 踩模拟：随机给这条内容一个踩
@@ -607,11 +607,11 @@ async function executeStrategy(runId: string) {
                   user_id: commentUserId || disliker.user_id,
                   target_type: "case",
                   target_id: dbResult.id,
-                }).then(() => {}).catch(() => {})
+                }).then(() => {}, () => {})
               }
             }
             succeeded.case++
-            await supabase.rpc("increment_vu_content", { p_id: user.id }).then(() => {}).catch(() => {})
+            await supabase.rpc("increment_vu_content", { p_id: user.id }).then(() => {}, () => {})
             await updateProgress("案例生成中")
             return { ok: true }
           } catch (err: any) {
@@ -647,7 +647,7 @@ async function executeStrategy(runId: string) {
               return { ok: false, error: error.message }
             }
             succeeded.question++
-            await supabase.rpc("increment_vu_content", { p_id: user.id }).then(() => {}).catch(() => {})
+            await supabase.rpc("increment_vu_content", { p_id: user.id }).then(() => {}, () => {})
             await updateProgress("提问生成中")
             return { ok: true }
           } catch (err: any) {
@@ -694,7 +694,7 @@ async function executeStrategy(runId: string) {
               return { ok: false, error: error.message }
             }
             succeeded.comment++
-            await supabase.rpc("increment_vu_content", { p_id: user.id }).then(() => {}).catch(() => {})
+            await supabase.rpc("increment_vu_content", { p_id: user.id }).then(() => {}, () => {})
             await updateProgress("评论生成中")
             return { ok: true }
           } catch (err: any) {
@@ -727,7 +727,7 @@ async function executeStrategy(runId: string) {
               content: replyPool[Math.floor(Math.random() * replyPool.length)],
               virtual_user_id: replier.id,
               parent_id: target.id,
-            }).then(() => {}).catch(() => {})
+            }).then(() => {}, () => {})
           } catch {}
         }
       }

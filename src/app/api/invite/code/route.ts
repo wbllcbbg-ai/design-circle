@@ -15,8 +15,8 @@ function generateCode(length = 6): string {
 }
 
 // 获取或创建我的邀请码
-export async function GET() {
-  const auth = await requireAuth()
+export async function GET(req: Request) {
+  const auth = await requireAuth(req)
   if (typeof auth !== "string") return auth
   const userId = auth
 
@@ -54,7 +54,7 @@ export async function GET() {
 
 // 修改邀请码
 export async function PUT(req: Request) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(req)
   if (typeof auth !== "string") return auth
   const userId = auth
 

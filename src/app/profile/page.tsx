@@ -136,11 +136,13 @@ export default function ProfilePage() {
           {/* 菜单 */}
           <div className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
             {[
+              { icon: "📋", label: "我的项目", href: "/my-projects" },
               { icon: "⭐", label: "我的点评", href: "/profile/reviews" },
               { icon: "❤️", label: "我的收藏", href: "/profile/favorites" },
               { icon: "👁️", label: "浏览历史", href: "/profile/history" },
               { icon: "📢", label: "邀请好友", href: "/invite" },
               { icon: "📊", label: "设计师工作台", href: "/dashboard" },
+              { icon: "🏢", label: "商家工作台", href: "/merchant" },
               ...(isAdmin ? [{ icon: "⚙️", label: "后台管理", href: "/admin" }] : []),
             ].map((item) => (
               <Link key={item.label} href={item.href} className="flex items-center justify-between px-4 py-3.5">

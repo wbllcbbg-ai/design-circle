@@ -40,7 +40,7 @@ export const dynamic = "force-dynamic"
 
 // 获取用户对某个目标的点赞状态
 export async function GET(req: Request) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(req)
   // 未登录用户返回未点赞状态（公开可读）
   if (typeof auth !== "string") {
     const { searchParams } = new URL(req.url)
@@ -90,7 +90,7 @@ export async function GET(req: Request) {
 
 // 点赞/取消点赞
 export async function POST(req: Request) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(req)
   if (typeof auth !== "string") return auth
   const userId = auth
 

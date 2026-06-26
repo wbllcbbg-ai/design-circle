@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/auth-guard"
 export const dynamic = "force-dynamic"
 
 export async function GET(req: Request) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(req)
   if (typeof auth !== "string") {
     return NextResponse.json({ can_review: false, reason: "请先登录" })
   }

@@ -8,7 +8,7 @@ import { House, Search, PlusSquare, MessageCircle, User } from "lucide-react"
 
 const navItems = [
   { href: "/", label: "首页", icon: House },
-  { href: "/search", label: "发现", icon: Search },
+  { href: "/discover", label: "发现", icon: Search },
   { href: "/publish", label: "", icon: PlusSquare },
   { href: "/messages", label: "消息", icon: MessageCircle },
   { href: "/profile", label: "我的", icon: User },

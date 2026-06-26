@@ -60,20 +60,20 @@ export default function ApplyPage() {
             <path d="m15 18-6-6 6-6" />
           </svg>
         </Link>
-        <h1 className="text-sm font-medium flex-1 text-center">设计师入驻申请</h1>
+        <h1 className="text-sm font-medium flex-1 text-center">入驻申请</h1>
       </div>
 
       <div className="p-4 space-y-4">
         <div>
           <p className="text-sm font-medium mb-2">申请类型 *</p>
-          <div className="flex gap-2">
-            {["designer", "company", "worker"].map((value) => {
+          <div className="grid grid-cols-3 gap-2">
+            {["designer", "company", "worker", "supplier", "contractor", "inspector"].map((value) => {
               const label = getRoleLabel(value)
               return (
                 <button
                   key={value}
                   onClick={() => setForm({ ...form, type: value })}
-                  className={`flex-1 py-2.5 rounded-full text-sm font-medium ${
+                  className={`py-2.5 rounded-full text-sm font-medium ${
                     form.type === value
                       ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
                       : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
@@ -88,7 +88,7 @@ export default function ApplyPage() {
 
         <div>
           <p className="text-sm font-medium mb-1.5">名称 *</p>
-          <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="你的姓名/公司名/工长名" className="w-full px-3 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-sm outline-none" />
+          <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="姓名/公司名/商家名" className="w-full px-3 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-sm outline-none" />
         </div>
 
         <div>

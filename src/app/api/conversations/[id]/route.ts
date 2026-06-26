@@ -5,8 +5,8 @@ import { requireAuth } from "@/lib/auth-guard"
 export const dynamic = "force-dynamic"
 
 // 获取对话的消息列表
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAuth()
+export async function GET(req, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireAuth(req)
   if (typeof auth !== "string") return auth
   const userId = auth
 
@@ -16,7 +16,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // 验证用户是这个对话的参与者
   const { data: conv } = await supabase
     .from("conversations")
-    .select("designer_id, user_id")
+    .select("designer_id, user_id, project_id, status")
     .eq("id", id)
     .single()
 
@@ -46,12 +46,23 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .neq("sender_id", userId)
     .eq("is_read", false)
 
-  return NextResponse.json({ messages: data ?? [] })
+  return NextResponse.json({
+    messages: data ?? [],
+    conversation: {
+      designer_id: conv.designer_id,
+      user_id: conv.user_id,
+      project_id: (conv as { project_id?: string | null }).project_id ?? null,
+      status: (conv as { status?: string }).status ?? "active",
+    },
+    // 当前用户在该对话中的角色，前端据此显示不同操作（如设计师显示"发起报价"）
+    my_role: designer && conv.designer_id === designer.id ? "designer" : "client",
+    my_designer_id: designer?.id ?? null,
+  })
 }
 
 // 发送消息
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAuth()
+export async function POST(req, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireAuth(req)
   if (typeof auth !== "string") return auth
   const userId = auth
 

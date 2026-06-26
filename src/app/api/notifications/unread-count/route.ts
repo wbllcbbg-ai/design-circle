@@ -4,8 +4,8 @@ import { requireAuth } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
-export async function GET() {
-  const auth = await requireAuth()
+export async function GET(req: Request) {
+  const auth = await requireAuth(req)
   // 未登录用户返回 0（公开可读，用于 Header 轮询）
   if (typeof auth !== "string") {
     return NextResponse.json({ unread: 0 })

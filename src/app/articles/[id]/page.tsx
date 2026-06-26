@@ -34,6 +34,7 @@ type Comment = {
   parent_id: string | null
   created_at: string
   user_id: string
+  user?: { nickname: string; avatar_url: string | null }
 }
 
 import { getRoleLabel } from "@/lib/types"

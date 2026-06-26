@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic"
 
 // 获取用户对某个目标的收藏状态
 export async function GET(req: Request) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(req)
   // 未登录用户返回未收藏状态（公开可读）
   if (typeof auth !== "string") {
     return NextResponse.json({ favorited: false })
@@ -36,7 +36,7 @@ export async function GET(req: Request) {
 
 // 收藏/取消收藏
 export async function POST(req: Request) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(req)
   if (typeof auth !== "string") return auth
   const userId = auth
 
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
 
 // 用户收藏列表
 export async function PUT(req: Request) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(req)
   if (typeof auth !== "string") return auth
   const userId = auth
 

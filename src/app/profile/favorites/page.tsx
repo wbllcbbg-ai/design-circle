@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { SafeImage } from "@/components/ui/safe-image"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 
@@ -105,7 +106,7 @@ export default function FavoritesPage() {
             return (
               <Link key={item.target_id} href={href} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition">
                 {item.target?.cover_url && (
-                  <img src={item.target.cover_url} alt="" className="w-16 h-12 rounded-lg object-cover shrink-0" />
+                  <SafeImage src={item.target.cover_url} alt="" className="w-16 h-12 rounded-lg object-cover shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium line-clamp-1">{title}</p>

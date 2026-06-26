@@ -33,7 +33,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ conversations })
   }
 
-  const auth = await requireAuth()
+  const auth = await requireAuth(req)
   if (typeof auth !== "string") return auth
   const userId = auth
 
@@ -85,7 +85,7 @@ export async function GET(req: Request) {
 
 // 创建或获取对话
 export async function POST(req: Request) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(req)
   if (typeof auth !== "string") return auth
   const userId = auth
 

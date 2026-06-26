@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { SafeImage } from "@/components/ui/safe-image"
 import { use } from "react"
 import Link from "next/link"
 
@@ -84,7 +85,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full shrink-0 flex items-center justify-center text-white text-lg font-medium overflow-hidden" style={{ background: "linear-gradient(135deg, hsl(200, 40%, 60%), hsl(160, 35%, 50%))" }}>
             {user.avatar_url ? (
-              <img src={user.avatar_url} alt={user.nickname} className="w-full h-full object-cover" />
+              <SafeImage src={user.avatar_url} alt={user.nickname} className="w-full h-full object-cover" />
             ) : (
               user.nickname[0]
             )}

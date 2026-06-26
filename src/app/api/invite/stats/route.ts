@@ -4,8 +4,8 @@ import { requireAuth } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
-export async function GET() {
-  const auth = await requireAuth()
+export async function GET(req: Request) {
+  const auth = await requireAuth(req)
   if (typeof auth !== "string") return auth
   const userId = auth
 

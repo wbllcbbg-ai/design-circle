@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
+import { SafeImage } from "@/components/ui/safe-image"
 
 interface ImageUploadProps {
   images: string[]
@@ -47,7 +48,7 @@ export function ImageUpload({ images, onChange, max = 9 }: ImageUploadProps) {
     <div className="grid grid-cols-3 gap-2">
       {images.map((url, i) => (
         <div key={i} className="aspect-[4/3] rounded-lg overflow-hidden relative group bg-zinc-100 dark:bg-zinc-800">
-          <img src={url} alt="" className="w-full h-full object-cover" />
+          <SafeImage src={url} alt="" className="w-full h-full object-cover" />
           <button
             onClick={() => handleRemove(i)}
             className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-xs"

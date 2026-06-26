@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { SafeImage } from "@/components/ui/safe-image"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 
@@ -77,7 +78,7 @@ export default function MyReviewsPage() {
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs text-zinc-500 overflow-hidden shrink-0">
                   {review.designers?.avatar_url
-                    ? <img src={review.designers.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ? <SafeImage src={review.designers.avatar_url} alt="" className="w-full h-full object-cover" />
                     : (review.designers?.name?.[0] || "设")}
                 </div>
                 <div className="flex-1 min-w-0">

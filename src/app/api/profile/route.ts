@@ -5,8 +5,8 @@ import { requireAuth } from "@/lib/auth-guard"
 export const dynamic = "force-dynamic"
 
 // 获取当前用户资料
-export async function GET() {
-  const auth = await requireAuth()
+export async function GET(req: Request) {
+  const auth = await requireAuth(req)
   if (typeof auth !== "string") return auth
   const userId = auth
 
@@ -17,7 +17,7 @@ export async function GET() {
 
 // 更新用户资料
 export async function PUT(req: Request) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(req)
   if (typeof auth !== "string") return auth
   const userId = auth
 

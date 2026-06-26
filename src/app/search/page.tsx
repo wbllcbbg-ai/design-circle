@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
+import { SafeImage } from "@/components/ui/safe-image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -97,7 +98,7 @@ export default function SearchPage() {
                       <div className="flex gap-3">
                         <div className="w-20 h-20 rounded-lg shrink-0 overflow-hidden bg-zinc-100 dark:bg-zinc-800">
                           {item.cover_url ? (
-                            <img src={item.cover_url} alt={item.title} className="w-full h-full object-cover" />
+                            <SafeImage src={item.cover_url} alt={item.title} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full" style={{ background: `linear-gradient(135deg, hsl(${hue}, 35%, 75%), hsl(${(hue + 60) % 360}, 30%, 65%))` }} />
                           )}

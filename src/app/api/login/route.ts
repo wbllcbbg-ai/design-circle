@@ -43,11 +43,30 @@ export async function POST(request: Request) {
     // 服务端设置 session cookie（确保 cookie 写入）
     // createServerClient 的 setAll 回调应该已经处理了
     // 再返回成功
+    // 查 users.role，供前端按角色跳转工作台
+    const adminSupabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return cookieStore.getAll() },
+          setAll() {},
+        },
+      },
+    )
+    const { data: userProfile } = await adminSupabase
+      .from("users")
+      .select("role")
+      .eq("id", data.user!.id)
+      .single()
+    const role = userProfile?.role || "user"
+
     return NextResponse.json({
       success: true,
       user: {
         id: data.user?.id,
         email: data.user?.email,
+        role,
       },
     })
   } catch (e: any) {

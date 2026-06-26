@@ -14,31 +14,60 @@ type Message = {
   created_at: string
 }
 
+type QuoteCard = {
+  id: string
+  design_fee: number
+  design_period: string | null
+  status: string
+  contract: { id: string; status: string; project_id: string | null; signed_at: string | null } | null
+  created_at: string
+}
+
 export default function ConversationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [messages, setMessages] = useState<Message[]>([])
+  const [quotes, setQuotes] = useState<QuoteCard[]>([])
   const [loading, setLoading] = useState(true)
   const [newMsg, setNewMsg] = useState("")
   const [sending, setSending] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+  const [myRole, setMyRole] = useState<"client" | "designer">("client")
+  const [showQuoteForm, setShowQuoteForm] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
-  const loadMessages = async () => {
-    setLoading(true)
+  // 报价表单状态
+  const [quoteForm, setQuoteForm] = useState({
+    design_fee: "",
+    design_period: "",
+    construction_period: "",
+    notes: "",
+  })
+  const [submittingQuote, setSubmittingQuote] = useState(false)
+
+  const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     setUserId(user.id)
 
-    const res = await fetch(`/api/conversations/${id}`)
-    if (res.ok) {
-      const data = await res.json()
+    const [msgRes, quoteRes] = await Promise.all([
+      fetch(`/api/conversations/${id}`),
+      fetch(`/api/quotes/conversation/${id}`),
+    ])
+
+    if (msgRes.ok) {
+      const data = await msgRes.json()
       setMessages(data.messages ?? [])
+      if (data.my_role) setMyRole(data.my_role)
+    }
+    if (quoteRes.ok) {
+      const qData = await quoteRes.json()
+      setQuotes(qData.quotes ?? [])
     }
     setLoading(false)
   }
 
-  useEffect(() => { loadMessages() }, [id])
+  useEffect(() => { loadData() }, [id])
 
   // 10s 轮询新消息
   useEffect(() => {
@@ -51,7 +80,6 @@ export default function ConversationDetailPage({ params }: { params: Promise<{ i
             const existingIds = new Set(prev.map(m => m.id))
             const newOnes = msgs.filter((m: Message) => !existingIds.has(m.id))
             if (newOnes.length === 0) return prev
-            // 返回新数组触发滚动
             return msgs
           })
         })
@@ -74,9 +102,59 @@ export default function ConversationDetailPage({ params }: { params: Promise<{ i
     })
     if (res.ok) {
       setNewMsg("")
-      await loadMessages()
+      await loadData()
     }
     setSending(false)
+  }
+
+  // 设计师提交报价
+  const handleSubmitQuote = async () => {
+    const fee = parseFloat(quoteForm.design_fee)
+    if (!fee || fee <= 0) {
+      alert("请填写有效的设计费金额")
+      return
+    }
+    setSubmittingQuote(true)
+    const res = await fetch(`/api/quotes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        conversation_id: id,
+        design_fee: fee,
+        design_period: quoteForm.design_period || null,
+        construction_period: quoteForm.construction_period || null,
+        notes: quoteForm.notes || null,
+      }),
+    })
+    setSubmittingQuote(false)
+    if (res.ok) {
+      setShowQuoteForm(false)
+      setQuoteForm({ design_fee: "", design_period: "", construction_period: "", notes: "" })
+      loadData()
+    } else {
+      const err = await res.json().catch(() => ({}))
+      alert(err.error || "报价发送失败")
+    }
+  }
+
+  // 业主接受/拒绝报价
+  const handleQuoteAction = async (quoteId: string, action: "accept" | "reject") => {
+    const res = await fetch(`/api/quotes/${quoteId}`, {
+      method: action === "accept" ? "POST" : "DELETE",
+    })
+    if (res.ok) {
+      loadData()
+    } else {
+      const err = await res.json().catch(() => ({}))
+      alert(err.error || "操作失败")
+    }
+  }
+
+  const QUOTE_STATUS_TEXT: Record<string, string> = {
+    pending: "等待业主回复",
+    accepted: "已接受",
+    rejected: "已拒绝",
+    expired: "已过期",
   }
 
   return (
@@ -89,7 +167,114 @@ export default function ConversationDetailPage({ params }: { params: Promise<{ i
           </svg>
         </Link>
         <h1 className="text-sm font-medium">对话</h1>
+        {/* 设计师：发起报价按钮 */}
+        {myRole === "designer" && (
+          <button
+            onClick={() => setShowQuoteForm(!showQuoteForm)}
+            className="ml-auto text-xs px-3 py-1 rounded-full bg-blue-500 text-white"
+          >
+            {showQuoteForm ? "取消" : "发起报价"}
+          </button>
+        )}
       </div>
+
+      {/* 报价表单（设计师） */}
+      {showQuoteForm && myRole === "designer" && (
+        <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 bg-blue-50 dark:bg-blue-950/30 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="number"
+              value={quoteForm.design_fee}
+              onChange={(e) => setQuoteForm({ ...quoteForm, design_fee: e.target.value })}
+              placeholder="设计费总额（元）"
+              className="text-sm px-2 py-1.5 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+            />
+            <input
+              type="text"
+              value={quoteForm.design_period}
+              onChange={(e) => setQuoteForm({ ...quoteForm, design_period: e.target.value })}
+              placeholder="设计周期（如15工作日）"
+              className="text-sm px-2 py-1.5 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+            />
+          </div>
+          <input
+            type="text"
+            value={quoteForm.construction_period}
+            onChange={(e) => setQuoteForm({ ...quoteForm, construction_period: e.target.value })}
+            placeholder="预估施工周期（选填）"
+            className="w-full text-sm px-2 py-1.5 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+          />
+          <textarea
+            value={quoteForm.notes}
+            onChange={(e) => setQuoteForm({ ...quoteForm, notes: e.target.value })}
+            placeholder="特别说明（不含项、付款节奏等）"
+            className="w-full text-sm px-2 py-1.5 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+            rows={2}
+          />
+          <button
+            onClick={handleSubmitQuote}
+            disabled={submittingQuote}
+            className="w-full text-sm py-1.5 rounded bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 disabled:opacity-50"
+          >
+            {submittingQuote ? "发送中..." : "发送报价"}
+          </button>
+        </div>
+      )}
+
+      {/* 报价卡片列表（双方可见） */}
+      {quotes.length > 0 && (
+        <div className="px-4 py-3 space-y-2 border-b border-zinc-100 dark:border-zinc-800">
+          {quotes.map((q) => {
+            const hasContract = q.contract && q.contract.status !== "draft"
+            const contractSigned = q.contract?.signed_at
+            return (
+              <div key={q.id} className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium">报价 · ¥{q.design_fee.toLocaleString()}</div>
+                    {q.design_period && <div className="text-xs text-zinc-500 mt-0.5">设计周期：{q.design_period}</div>}
+                  </div>
+                  <span className={`text-xs ${q.status === "accepted" ? "text-green-500" : q.status === "rejected" ? "text-red-500" : "text-zinc-400"}`}>
+                    {QUOTE_STATUS_TEXT[q.status]}
+                  </span>
+                </div>
+
+                {/* 业主操作按钮 */}
+                {myRole === "client" && q.status === "pending" && (
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => handleQuoteAction(q.id, "accept")}
+                      className="flex-1 text-xs py-1.5 rounded bg-green-500 text-white"
+                    >
+                      接受报价
+                    </button>
+                    <button
+                      onClick={() => handleQuoteAction(q.id, "reject")}
+                      className="flex-1 text-xs py-1.5 rounded border border-zinc-300 dark:border-zinc-600"
+                    >
+                      拒绝
+                    </button>
+                  </div>
+                )}
+
+                {/* 已生成合同 → 跳签约/项目 */}
+                {hasContract && q.contract && (
+                  <Link
+                    href={contractSigned && q.contract.project_id ? `/projects/${q.contract.project_id}` : "#"}
+                    className={`block mt-2 text-xs py-1.5 rounded text-center ${
+                      contractSigned
+                        ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                    }`}
+                  >
+                    {contractSigned ? "查看项目进度 →" : "合同待签约"}
+                  </Link>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
@@ -117,7 +302,7 @@ export default function ConversationDetailPage({ params }: { params: Promise<{ i
             </div>
           )
         })}
-        {!loading && messages.length === 0 && (
+        {!loading && messages.length === 0 && quotes.length === 0 && (
           <div className="flex items-center justify-center py-10 text-xs text-zinc-400">暂无消息，发送第一条消息吧</div>
         )}
         <div ref={bottomRef} />

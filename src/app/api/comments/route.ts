@@ -55,7 +55,7 @@ export async function GET(req: Request) {
 
 // 创建评论
 export async function POST(req: Request) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(req)
   if (typeof auth !== "string") return auth
   const userId = auth
 
