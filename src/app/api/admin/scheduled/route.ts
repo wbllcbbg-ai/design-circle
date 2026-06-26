@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic"
 
 // GET /api/admin/scheduled — 查询排期列表
 export async function GET(req: Request) {
-  const guard = await requireAdmin()
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const { searchParams } = new URL(req.url)
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
 
 // POST /api/admin/scheduled/:id/reschedule — 调整发布时间（query: id, time）
 export async function PUT(req: Request) {
-  const guard = await requireAdmin()
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const body = await req.json()

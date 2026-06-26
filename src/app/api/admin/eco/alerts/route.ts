@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic"
 
 // POST /api/admin/eco/alerts/snooze — 静音某条告警
 export async function POST(req: Request) {
-  const guard = await requireAdmin()
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const body = await req.json()
@@ -37,8 +37,8 @@ export async function POST(req: Request) {
 }
 
 // POST /api/admin/eco/alerts/unsnooze-all — 恢复所有静音告警
-export async function PUT() {
-  const guard = await requireAdmin()
+export async function PUT(req: Request) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const supabase = createDirectClient()

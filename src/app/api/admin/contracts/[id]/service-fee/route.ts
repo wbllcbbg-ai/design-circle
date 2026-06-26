@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic"
 // PUT /api/admin/contracts/[id]/service-fee — 标记设计师固定服务费已收
 // 平台收入入口：设计师对公转账固定金额 → admin 标记 service_fee_paid=true
 // 这是平台唯一触碰的钱（非业主资金），合规。
-export async function PUT(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin()
+export async function PUT(req, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const { id } = await params

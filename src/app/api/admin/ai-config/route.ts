@@ -5,8 +5,8 @@ import { requireAdmin } from "@/lib/auth-guard"
 export const dynamic = "force-dynamic"
 
 // GET — 获取所有 AI 配置
-export async function GET() {
-  const guard = await requireAdmin()
+export async function GET(req: Request) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const supabase = createDirectClient()
@@ -20,7 +20,7 @@ export async function GET() {
 
 // PUT — 更新 AI 配置
 export async function PUT(req: Request) {
-  const guard = await requireAdmin()
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const body = await req.json()

@@ -4,8 +4,8 @@ import { requireAdmin } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin()
+export async function GET(req, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const { id } = await params
@@ -16,8 +16,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   return NextResponse.json({ virtual_user: data })
 }
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin()
+export async function PUT(req, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const { id } = await params
@@ -29,8 +29,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   return NextResponse.json({ virtual_user: data })
 }
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin()
+export async function DELETE(req, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const { id } = await params

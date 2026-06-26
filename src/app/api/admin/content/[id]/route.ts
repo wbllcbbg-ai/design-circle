@@ -6,8 +6,8 @@ export const dynamic = "force-dynamic"
 
 // GET /api/admin/content/:id — 获取单条内容详情
 // GET /api/admin/content/:id/diff — AI原始 vs 当前版本对比（通过 URL 判断）
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin()
+export async function GET(req, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const { id } = await params
@@ -61,8 +61,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 }
 
 // PUT /api/admin/content/:id — 编辑内容
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin()
+export async function PUT(req, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const { id } = await params

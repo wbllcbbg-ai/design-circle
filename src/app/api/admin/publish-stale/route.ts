@@ -5,8 +5,8 @@ import { requireAdmin } from "@/lib/auth-guard"
 export const dynamic = "force-dynamic"
 
 // POST /api/admin/publish-stale — 发布策略引擎未发布的存量内容
-export async function POST() {
-  const guard = await requireAdmin()
+export async function POST(req: Request) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const supabase = createDirectClient()

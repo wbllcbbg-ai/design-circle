@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic"
 
 // GET /api/admin/content — 内容库列表 + 筛选 + 搜索 + 分页
 export async function GET(req: Request) {
-  const guard = await requireAdmin()
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const { searchParams } = new URL(req.url)

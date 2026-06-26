@@ -109,7 +109,7 @@ export async function POST(req: Request) {
   const isCron = cronSecret && authHeader === `Bearer ${cronSecret}`
 
   if (!isCron) {
-    const guard = await requireAdmin()
+    const guard = await requireAdmin(req)
     if (guard) return guard
   }
 

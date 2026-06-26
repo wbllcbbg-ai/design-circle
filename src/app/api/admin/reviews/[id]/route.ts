@@ -4,8 +4,8 @@ import { requireAdmin } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin()
+export async function PUT(req, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const { id } = await params

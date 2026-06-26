@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic"
 // GET /api/admin/deposits — 查询保证金记录（admin）
 // 可选 query: role, status
 export async function GET(req: Request) {
-  const guard = await requireAdmin()
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const { searchParams } = new URL(req.url)
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
 // POST /api/admin/deposits — admin 录入保证金（线下对公收取后记录状态）
 // 平台不碰钱，只记录「已收到」状态
 export async function POST(req: Request) {
-  const guard = await requireAdmin()
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const body = await req.json()
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
 
 // PUT /api/admin/deposits/[id] — 更新保证金状态（用于赔付使用/退还）
 export async function PUT(req: Request) {
-  const guard = await requireAdmin()
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const { searchParams } = new URL(req.url)

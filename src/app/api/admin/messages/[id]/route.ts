@@ -5,8 +5,8 @@ import { requireAdmin } from "@/lib/auth-guard"
 export const dynamic = "force-dynamic"
 
 // GET /api/admin/messages/:id — 管理员查看对话消息
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin()
+export async function GET(req, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const { id } = await params
@@ -29,8 +29,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 // POST /api/admin/messages/:id — 管理员回复消息
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin()
+export async function POST(req, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const { id } = await params

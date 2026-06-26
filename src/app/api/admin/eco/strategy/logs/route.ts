@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic"
 
 // GET /api/admin/eco/strategy/logs — 执行日志列表
 export async function GET(req: Request) {
-  const guard = await requireAdmin()
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const { searchParams } = new URL(req.url)

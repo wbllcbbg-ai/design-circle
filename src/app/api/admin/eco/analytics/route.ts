@@ -4,8 +4,8 @@ import { requireAdmin } from "@/lib/auth-guard"
 export const dynamic = "force-dynamic"
 
 // GET /api/admin/eco/analytics — 内容分析数据（最近 14 天快照）
-export async function GET() {
-  const guard = await requireAdmin()
+export async function GET(req: Request) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const supabase = createDirectClient()
@@ -23,8 +23,8 @@ export async function GET() {
 }
 
 // POST /api/admin/eco/analytics — 生成今天的快照
-export async function POST() {
-  const guard = await requireAdmin()
+export async function POST(req: Request) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const supabase = createDirectClient()

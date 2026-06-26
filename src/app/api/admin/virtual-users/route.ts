@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic"
 
 // GET /api/admin/virtual-users — list with search/filter/pagination
 export async function GET(req: Request) {
-  const guard = await requireAdmin()
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const { searchParams } = new URL(req.url)
@@ -36,7 +36,7 @@ export async function GET(req: Request) {
 
 // POST /api/admin/virtual-users — 批量生成虚拟用户
 export async function POST(req: Request) {
-  const guard = await requireAdmin()
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const body = await req.json()

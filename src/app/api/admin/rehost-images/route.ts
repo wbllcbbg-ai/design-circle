@@ -7,8 +7,8 @@ export const maxDuration = 120
 
 // POST /api/admin/rehost-images — 批量转存历史 OSS 图片到 Supabase Storage
 // 一次性路由，跑完后可以删除
-export async function POST() {
-  const guard = await requireAdmin()
+export async function POST(req: Request) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const supabase = createDirectClient()

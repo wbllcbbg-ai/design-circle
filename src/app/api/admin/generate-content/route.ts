@@ -70,7 +70,7 @@ const defaultScheduleConfig: ScheduleConfig = {
 }
 
 export async function POST(req: Request) {
-  const guard = await requireAdmin()
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   // 加载运行�� AI 配置（从数据库读取 key）

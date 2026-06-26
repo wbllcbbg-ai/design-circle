@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic"
 // 副作用：信用 -20 + skip_order_count +1 + 主页警示
 // 承认检测难：靠业主/同行举报 + 人工确认，主武器仍是「不走平台=没信用=没流量」
 export async function POST(req: Request) {
-  const guard = await requireAdmin()
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const body = await req.json()

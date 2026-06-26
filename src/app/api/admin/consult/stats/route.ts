@@ -4,8 +4,8 @@ import { requireAdmin } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
-export async function GET() {
-  const guard = await requireAdmin()
+export async function GET(req: Request) {
+  const guard = await requireAdmin(req)
   if (guard) return guard
 
   const supabase = createDirectClient()
