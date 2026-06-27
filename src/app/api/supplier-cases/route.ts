@@ -4,10 +4,10 @@ import { requireAuth } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
-// 取当前用户材料商身份
-async function getSupplierIdentity() {
+// 取当前用户材料商身份（支持 Bearer token）
+async function getSupplierIdentity(req?: Request) {
   const { getCurrentUserId } = await import("@/lib/supabase/server")
-  const userId = await getCurrentUserId()
+  const userId = await getCurrentUserId(req)
   if (!userId) return null
   const supabase = createDirectClient()
   const { data } = await supabase
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
   const supabase = createDirectClient()
 
   if (asSupplier) {
-    const supplierId = await getSupplierIdentity()
+    const supplierId = await getSupplierIdentity(req)
     if (!supplierId) return NextResponse.json({ error: "非材料商身份" }, { status: 403 })
     const { data } = await supabase
       .from("supplier_cases")
@@ -67,7 +67,7 @@ export async function GET(req: Request) {
 
 // POST /api/supplier-cases — 材料商申请关联案例
 export async function POST(req: Request) {
-  const supplierId = await getSupplierIdentity()
+  const supplierId = await getSupplierIdentity(req)
   if (!supplierId) return NextResponse.json({ error: "非材料商身份" }, { status: 403 })
 
   const body = await req.json()

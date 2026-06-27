@@ -18,17 +18,27 @@ export async function GET(req: Request) {
   const supabase = createDirectClient()
 
   if (as === "merchant") {
-    // 商家看收到的留言
-    const { data, error } = await supabase
+    // 商家看收到的留言（不 join users，避免双外键歧义）
+    const { data: msgs, error } = await supabase
       .from("merchant_messages")
-      .select(`
-        id, merchant_type, content, contact_info, status, created_at, replied_at,
-        user:users(id, nickname, avatar_url)
-      `)
+      .select("id, merchant_type, user_id, content, contact_info, status, created_at, replied_at")
       .eq("merchant_user_id", userId)
       .order("created_at", { ascending: false })
       .limit(50)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // 单独查业主昵称
+    const userIds = [...new Set((msgs || []).map((m: { user_id: string }) => m.user_id))]
+    const userMap: Record<string, { nickname: string; avatar_url: string | null }> = {}
+    if (userIds.length > 0) {
+      const { data: users } = await supabase.from("users").select("id, nickname, avatar_url").in("id", userIds)
+      for (const u of users || []) userMap[u.id] = { nickname: u.nickname, avatar_url: u.avatar_url }
+    }
+
+    const result = (msgs || []).map((m: Record<string, unknown>) => ({
+      ...m,
+      user: userMap[m.user_id as string] || { nickname: "业主", avatar_url: null },
+    }))
 
     // 标记已读（首次查看时）
     await supabase
@@ -37,7 +47,7 @@ export async function GET(req: Request) {
       .eq("merchant_user_id", userId)
       .eq("status", "pending")
 
-    return NextResponse.json({ messages: data ?? [] })
+    return NextResponse.json({ messages: result })
   } else {
     // 业主看自己发的留言
     const { data } = await supabase
