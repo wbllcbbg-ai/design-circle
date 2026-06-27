@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { PageHeader } from "@/components/layout/page-header"
 import { Badge } from "@/components/ui/badge"
 
@@ -18,6 +19,7 @@ type CaseItem = {
 const STYLES = ["全部", "现代简约", "北欧风", "新中式", "日式", "轻奢", "混搭"]
 
 export default function CasesPage() {
+  const router = useRouter()
   const [cases, setCases] = useState<CaseItem[]>([])
   const [loading, setLoading] = useState(true)
   const [activeStyle, setActiveStyle] = useState("全部")
@@ -79,13 +81,12 @@ export default function CasesPage() {
                       {item.budget && <><span>·</span><span>{item.budget}万</span></>}
                     </div>
                     {item.designer && (
-                      <Link
-                        href={`/designers/${item.designer.id}`}
-                        onClick={(e) => e.stopPropagation()}
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/designers/${item.designer.id}`) }}
                         className="inline-block mt-1 text-[10px] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
                       >
                         👤 {item.designer.name}
-                      </Link>
+                      </button>
                     )}
                   </div>
                 </div>
