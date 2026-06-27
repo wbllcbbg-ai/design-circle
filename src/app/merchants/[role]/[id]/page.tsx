@@ -41,15 +41,51 @@ export default function MerchantDetailPage() {
   const { role, id } = params
   const [merchant, setMerchant] = useState<Merchant | null>(null)
   const [credit, setCredit] = useState<Credit | null>(null)
+  const [cases, setCases] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  // 留言表单
+  const [showMsgForm, setShowMsgForm] = useState(false)
+  const [msgContent, setMsgContent] = useState("")
+  const [msgContact, setMsgContact] = useState("")
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+
+  const sendMsg = async () => {
+    if (!msgContent.trim()) return
+    setSending(true)
+    const res = await fetch("/api/merchant-messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        merchant_type: role,
+        merchant_id: id,
+        content: msgContent,
+        contact_info: msgContact || null,
+      }),
+    })
+    setSending(false)
+    if (res.ok) {
+      setSent(true)
+      setMsgContent("")
+      setMsgContact("")
+    } else {
+      const err = await res.json().catch(() => ({}))
+      alert(err.error || "发送失败")
+    }
+  }
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/merchants/${role}/${id}`).then((r) => r.json()), // 单条详情（不再扒列表）
+      fetch(`/api/merchants/${role}/${id}`).then((r) => r.json()),
       fetch(`/api/merchants/${role}/${id}/credit`).then((r) => r.json()),
-    ]).then(([detailData, creditData]) => {
+      // 材料商加载已通过的关联案例（公开 API）
+      role === "supplier"
+        ? fetch(`/api/supplier-cases/by-supplier/${id}`).then((r) => r.json()).catch(() => ({ cases: [] }))
+        : Promise.resolve({ cases: [] }),
+    ]).then(([detailData, creditData, caseData]) => {
       setMerchant(detailData.merchant || null)
       setCredit(creditData.credit || null)
+      setCases(caseData.cases || [])
       setLoading(false)
     })
   }, [role, id])
@@ -143,13 +179,80 @@ export default function MerchantDetailPage() {
           </div>
         )}
 
+        {/* 应用案例（材料商关联的真实案例）—— 产品展示区 */}
+        {cases.length > 0 && (
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 border border-zinc-100 dark:border-zinc-800">
+            <h2 className="text-sm font-medium mb-3">🏠 产品应用案例</h2>
+            <div className="grid grid-cols-2 gap-2">
+              {cases.map((sc: any) => {
+                const c = sc.case
+                if (!c) return null
+                return (
+                  <Link
+                    key={sc.id}
+                    href={`/cases/${c.id}`}
+                    className="block rounded-lg overflow-hidden border border-zinc-100 dark:border-zinc-800"
+                  >
+                    <div className="aspect-[4/3] bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                      {c.cover_url || (c.images && c.images[0]) ? (
+                        <SafeImage
+                          src={c.cover_url || c.images[0]}
+                          alt={c.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-zinc-300 text-xs">无图</div>
+                      )}
+                    </div>
+                    <p className="text-xs p-2 truncate">{c.title}</p>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* 咨询入口 */}
-        <Link
-          href="/messages"
-          className="block p-4 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 rounded-xl text-center text-sm font-medium"
+        <button
+          onClick={() => { setShowMsgForm(!showMsgForm); setSent(false) }}
+          className="block w-full p-4 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 rounded-xl text-center text-sm font-medium"
         >
-          联系咨询
-        </Link>
+          {showMsgForm ? "收起" : "联系咨询"}
+        </button>
+
+        {/* 留言表单 */}
+        {showMsgForm && (
+          <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-xl p-4 space-y-2">
+            {sent ? (
+              <p className="text-sm text-green-600 text-center py-4">
+                ✓ 留言已发送，{merchant.name} 会在工作台看到你的咨询
+              </p>
+            ) : (
+              <>
+                <textarea
+                  value={msgContent}
+                  onChange={(e) => setMsgContent(e.target.value)}
+                  placeholder={`向${merchant.name}描述你的需求，如：我想咨询...`}
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 outline-none resize-none"
+                  rows={3}
+                />
+                <input
+                  value={msgContact}
+                  onChange={(e) => setMsgContact(e.target.value)}
+                  placeholder="联系方式（选填，如手机/微信）"
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 outline-none"
+                />
+                <button
+                  onClick={sendMsg}
+                  disabled={!msgContent.trim() || sending}
+                  className="w-full text-sm py-2 rounded-lg bg-blue-500 text-white disabled:opacity-50"
+                >
+                  {sending ? "发送中..." : "发送留言"}
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

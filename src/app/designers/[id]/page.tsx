@@ -321,6 +321,7 @@ export default function DesignerDetailPage({ params }: { params: Promise<{ id: s
   const [reviewOpen, setReviewOpen] = useState(false)
   const [consultOpen, setConsultOpen] = useState(false)
   const [sentToast, setSentToast] = useState(false)
+  const [toastMsg, setToastMsg] = useState("")
   const [contentTab, setContentTab] = useState<"cases" | "articles">("cases")
 
   useEffect(() => {
@@ -380,10 +381,12 @@ export default function DesignerDetailPage({ params }: { params: Promise<{ id: s
 
         {sentToast && (
           <div className="mt-4 px-4 py-2.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-xs text-green-700 dark:text-green-300">
-            <p>✅ 咨询已发送，设计师会在 <strong>30分钟内</strong> 回复你</p>
-            <Link href="/messages" className="block mt-1.5 underline underline-offset-2 font-medium">
-              查看我的咨询 →
-            </Link>
+            <p>✅ {toastMsg}已提交成功！{toastMsg === "咨询" ? "设计师会尽快回复你" : "感谢你的评价"}</p>
+            {toastMsg === "咨询" && (
+              <Link href="/messages" className="block mt-1.5 underline underline-offset-2 font-medium">
+                查看我的咨询 →
+              </Link>
+            )}
           </div>
         )}
         <button
@@ -421,7 +424,9 @@ export default function DesignerDetailPage({ params }: { params: Promise<{ id: s
         designerId={id}
         onSubmitted={() => {
           setReviewOpen(false)
-          window.location.reload()
+          setToastMsg("评价")
+          setSentToast(true)
+          setTimeout(() => { setSentToast(false); router.refresh() }, 8000)
         }}
       />
 
@@ -430,7 +435,7 @@ export default function DesignerDetailPage({ params }: { params: Promise<{ id: s
         onClose={() => setConsultOpen(false)}
         designerId={id}
         designerName={designer.name}
-        onSent={() => { setConsultOpen(false); setSentToast(true); setTimeout(() => setSentToast(false), 8000) }}
+        onSent={() => { setConsultOpen(false); setToastMsg("咨询"); setSentToast(true); setTimeout(() => setSentToast(false), 8000) }}
       />
 
       {(cases.length > 0 || articles.length > 0) && (
