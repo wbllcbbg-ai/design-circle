@@ -281,16 +281,21 @@ export async function generateComment(user: VirtualUser, history: HistoryItem[],
   const prompt = buildContextPrompt(user, history,
     `请以该用户的身份对${targetTitle ? "《" + targetTitle + "》" : ""}发表一条评论。
 返回 JSON 格式：{"content": "..."}
-- 评论要自然，像是看到内容后的即时反应
-- 如果用户是设计师，可以给出专业建议或认同
-- 如果用户是业主，分享自己的类似经历或感受
-- 字数 10-100 字`
+重要要求：
+- 模仿真实网友评论，不要太完整、太得体，要像随手打的
+- 字数尽量短，5-30字为主，偶尔长一点
+- 不用句号，用空格或逗号
+- 可以带情绪词（绝了、卧槽、哈哈、哭、mark、码）
+- 业主角色：口语化、求联系方式、问价格、共鸣、吐槽被坑
+- 设计师角色：用行话、短、像内行人随口一句
+- 像刷手机时随手评论的感觉，不是写文章
+- 不要"这篇文章""作者"这种书面词`
   )
 
-  const raw = await callAI(prompt, 0.7, 512)
+  const raw = await callAI(prompt, 0.85, 512)
   const json = safeParse(raw, { content: "" })
 
-  return { content: json.content || "说得好，学习了！" }
+  return { content: json.content || "码了" }
 }
 
 export async function generateReview(user: VirtualUser, history: HistoryItem[], designerName?: string) {
@@ -298,7 +303,10 @@ export async function generateReview(user: VirtualUser, history: HistoryItem[], 
     `请以该业主的身份对${designerName ? "设计师 " + designerName : "一位设计师"}写一条装修评价。
 返回 JSON 格式：{"rating": 5, "design_score": 5, "construction_score": 4, "service_score": 5, "content": "..."}
 - rating 1-5，正面为主（4-5分占80%，3分占15%，1-2分占5%）
-- content 20-100字，具体真实`
+- content 用业主口吻，像装修完跟邻居聊天时的评价，口语化
+- 不要"专业""细致""到位"这种词，用业主会说的大白话
+- 可以提具体的事（比如"工长老李很负责""方案改了三版才定下来"）
+- 15-80字`
   )
 
   const raw = await callAI(prompt, 0.7, 512)
