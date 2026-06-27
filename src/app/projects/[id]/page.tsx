@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
+import { PageHeader } from "@/components/layout/page-header"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { CheckCircle2, Clock, XCircle, FileText, ImageIcon, Upload } from "lucide-react"
@@ -129,7 +130,9 @@ export default function ProjectPage() {
   const isCompleted = project.status === "completed"
 
   return (
-    <div className="p-4 space-y-4 pb-20">
+    <div>
+      <PageHeader title="项目详情" fallbackHref="/my-projects" />
+      <div className="p-4 space-y-4 pb-20">
       {/* 顶部：项目名 + 状态 */}
       <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 border border-zinc-100 dark:border-zinc-800">
         <h1 className="text-lg font-semibold">{project.title}</h1>
@@ -306,6 +309,7 @@ export default function ProjectPage() {
           <p className="text-xs text-zinc-500 mt-1">你的评价将计入设计师真实信用分</p>
         </Link>
       )}
+      </div>
     </div>
   )
 }

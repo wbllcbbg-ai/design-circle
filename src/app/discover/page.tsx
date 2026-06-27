@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Search } from "lucide-react"
 import { SafeImage } from "@/components/ui/safe-image"
+import { PageHeader } from "@/components/layout/page-header"
 
 type Merchant = {
   id: string
@@ -49,6 +50,7 @@ export default function DiscoverPage() {
 
   return (
     <div className="pb-20">
+      <PageHeader title="发现" />
       {/* 搜索栏 */}
       <div className="px-4 pt-4">
         <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 rounded-full px-3 py-2">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { PageHeader } from "@/components/layout/page-header"
 import { Badge } from "@/components/ui/badge"
 
 type CaseItem = {
@@ -34,7 +35,9 @@ export default function CasesPage() {
   }, [activeStyle])
 
   return (
-    <div className="p-4">
+    <div className="bg-white dark:bg-zinc-900 min-h-screen">
+      <PageHeader title="装修案例" />
+      <div className="p-4">
       {/* 筛选栏 */}
       <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
         {STYLES.map((tag) => (
@@ -91,6 +94,7 @@ export default function CasesPage() {
           })}
         </div>
       )}
+      </div>
     </div>
   )
 }

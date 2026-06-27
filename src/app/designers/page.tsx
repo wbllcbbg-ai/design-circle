@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { PageHeader } from "@/components/layout/page-header"
 
 type Designer = {
   id: string
@@ -55,6 +56,7 @@ export default function DesignersPage() {
 
   return (
     <div className="bg-white dark:bg-zinc-900 min-h-screen">
+      <PageHeader title="找设计师" />
       {/* 搜索栏 + Tab */}
       <div className="border-b border-zinc-100 dark:border-zinc-800">
         <div className="px-3 pt-2.5">

@@ -45,11 +45,10 @@ export default function MerchantDetailPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/merchants/${role}?limit=50`).then((r) => r.json()), // 列表里找（简化，MVP）
+      fetch(`/api/merchants/${role}/${id}`).then((r) => r.json()), // 单条详情（不再扒列表）
       fetch(`/api/merchants/${role}/${id}/credit`).then((r) => r.json()),
-    ]).then(([listData, creditData]) => {
-      const m = (listData.merchants || []).find((x: Merchant) => x.id === id)
-      setMerchant(m || null)
+    ]).then(([detailData, creditData]) => {
+      setMerchant(detailData.merchant || null)
       setCredit(creditData.credit || null)
       setLoading(false)
     })

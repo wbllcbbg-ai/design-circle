@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { SafeImage } from "@/components/ui/safe-image"
 import Link from "next/link"
 import Image from "next/image"
 import { use } from "react"
@@ -235,7 +236,13 @@ export default function ArticleDetailPage({
           <div className="space-y-3">
             {comments.map((comment) => (
               <div key={comment.id} className="flex gap-2">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-zinc-300 to-zinc-400 dark:from-zinc-600 dark:to-zinc-700 shrink-0 flex items-center justify-center text-[10px] text-white" />
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-zinc-300 to-zinc-400 dark:from-zinc-600 dark:to-zinc-700 shrink-0 flex items-center justify-center text-[10px] text-white overflow-hidden">
+                  {comment.user?.avatar_url ? (
+                    <SafeImage src={comment.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{(comment.user?.nickname || "?").slice(0, 1)}</span>
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-medium text-zinc-500">{comment.user?.nickname || "用户"}</span>

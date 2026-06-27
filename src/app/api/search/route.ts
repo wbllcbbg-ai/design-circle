@@ -11,16 +11,17 @@ export async function GET(req: Request) {
     const type = searchParams.get("type") || "all"
 
     if (!q) {
-      return NextResponse.json({ results: { cases: [], articles: [], designers: [] } })
+      return NextResponse.json({ results: { cases: [], articles: [], designers: [], merchants: [] } })
     }
 
     const supabase = createDirectClient()
 
     // 使用 textSearch 替代复杂的 or/ilike 链
-    const results: { cases: any[]; articles: any[]; designers: any[] } = {
+    const results: { cases: any[]; articles: any[]; designers: any[]; merchants: any[] } = {
       cases: [],
       articles: [],
       designers: [],
+      merchants: [],
     }
 
     if (type === "all" || type === "cases") {
@@ -59,8 +60,24 @@ export async function GET(req: Request) {
       )
     }
 
+    // 商家搜索：材料商/施工方/监理（合并为 merchants 结果）
+    if (type === "all" || type === "merchants") {
+      const matchMerchant = (m: any) =>
+        [m.name, m.description, m.brand, m.specialties?.join(" "), m.service_areas?.join(" ")].some((f) => f && f.toLowerCase().includes(q.toLowerCase()))
+      const [sup, con, ins] = await Promise.all([
+        supabase.from("suppliers").select("id, name, logo_url, description, brand, category, is_verified").eq("is_verified", true).limit(20),
+        supabase.from("contractors").select("id, name, logo_url, description, specialties, service_areas, is_verified").eq("is_verified", true).limit(20),
+        supabase.from("inspectors").select("id, name, logo_url, description, service_areas, is_verified").eq("is_verified", true).limit(20),
+      ])
+      results.merchants = [
+        ...(sup.data || []).filter(matchMerchant).map((m: any) => ({ ...m, role: "supplier" })),
+        ...(con.data || []).filter(matchMerchant).map((m: any) => ({ ...m, role: "contractor" })),
+        ...(ins.data || []).filter(matchMerchant).map((m: any) => ({ ...m, role: "inspector" })),
+      ].slice(0, 10)
+    }
+
     return NextResponse.json({ results, query: q })
   } catch (err: any) {
-    return NextResponse.json({ error: "搜索出错", results: { cases: [], articles: [], designers: [] }, query: q }, { status: 500 })
+    return NextResponse.json({ error: "搜索出错", results: { cases: [], articles: [], designers: [], merchants: [] }, query: q }, { status: 500 })
   }
 }

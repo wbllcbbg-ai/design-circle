@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { PageHeader } from "@/components/layout/page-header"
 import Link from "next/link"
 import { getArticleCover } from "@/lib/images"
 import { SafeImage } from "@/components/ui/safe-image"
@@ -40,6 +41,7 @@ export default function ArticlesPage() {
 
   return (
     <div className="bg-white dark:bg-zinc-900 min-h-screen">
+      <PageHeader title="装修攻略" />
       <div className="px-3 py-2.5 overflow-x-auto scrollbar-hide border-b border-zinc-100 dark:border-zinc-800">
         <div className="flex gap-2">
           {CATEGORIES.map((cat) => (

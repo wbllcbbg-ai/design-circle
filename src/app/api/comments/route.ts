@@ -41,6 +41,16 @@ export async function GET(req: Request) {
     }
   }
 
+  // 查虚拟人昵称（虚拟人评论 user_id 为空，用 virtual_user_id 关联）
+  const virtualIds = [...new Set((data ?? []).map((c: any) => c.virtual_user_id).filter(Boolean))]
+  const virtualMap: Record<string, any> = {}
+  if (virtualIds.length > 0) {
+    const { data: vus } = await supabase.from("virtual_users").select("id, nickname").in("id", virtualIds)
+    for (const v of vus ?? []) {
+      virtualMap[v.id] = { nickname: v.nickname, avatar_url: null }
+    }
+  }
+
   const comments = (data ?? []).map((c: any) => ({
     id: c.id,
     content: c.content,
@@ -48,7 +58,8 @@ export async function GET(req: Request) {
     created_at: c.created_at,
     user_id: c.user_id,
     virtual_user_id: c.virtual_user_id,
-    user: userMap[c.user_id] || { nickname: "未知用户", avatar_url: null },
+    // 优先用真实用户，其次虚拟人，最后兜底
+    user: userMap[c.user_id] || (c.virtual_user_id && virtualMap[c.virtual_user_id]) || { nickname: "匿名用户", avatar_url: null },
   }))
   return NextResponse.json({ comments })
 }

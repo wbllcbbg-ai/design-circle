@@ -102,7 +102,7 @@ export default function FavoritesPage() {
         <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
           {favorites.map((item) => {
             const title = item.target?.title || "未知内容"
-            const href = `/cases/${item.target_id}`
+            const href = tab === "article" ? `/articles/${item.target_id}` : `/cases/${item.target_id}`
             return (
               <Link key={item.target_id} href={href} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition">
                 {item.target?.cover_url && (

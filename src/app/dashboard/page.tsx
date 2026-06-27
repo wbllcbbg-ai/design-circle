@@ -359,7 +359,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-medium">近期评价</h2>
           <Link
-            href={`/designers/${designer.id}/reviews`}
+            href={`/designers/${designer.id}#reviews`}
             className="text-xs text-zinc-400"
           >
             查看全部

@@ -263,6 +263,37 @@ async function executeStrategy(runId: string) {
           })),
         )
         .select("id, nickname, role, city, age_group, decoration_stage, active_periods, interest_tags, tone_style, speak_frequency, specialty")
+
+      // 为 designer 角色的虚拟人补建影子用户 + designers 记录 + 回填 user_id
+      // 否则这些虚拟设计师详情页会没有案例和文章（数据关联断裂）
+      for (const vu of newVus || []) {
+        if (vu.role === "designer") {
+          // 影子用户：用 service_role 绕过 FK（virtual_{id}@designcircle.local）
+          const { data: shadowUser } = await supabase
+            .from("users")
+            .insert({
+              id: vu.id,
+              email: `virtual_${vu.id}@designcircle.local`,
+              nickname: vu.nickname,
+              role: "designer",
+            })
+            .select("id")
+            .maybeSingle()
+
+          if (shadowUser?.id) {
+            await supabase.from("virtual_users").update({ user_id: shadowUser.id }).eq("id", vu.id)
+            // 建 designers 记录（供案例发布 + 详情页关联）
+            await supabase.from("designers").insert({
+              user_id: shadowUser.id,
+              type: "designer",
+              name: vu.nickname,
+              description: "AI 虚拟设计师",
+              city_id: null,
+              is_verified: true,
+            })
+          }
+        }
+      }
     }
 
     // 重新获取 active 列表（可能刚补充了新的）
