@@ -77,7 +77,7 @@ export async function GET(req: Request) {
     title: c.title,
     style: c.style,
     area: c.area,
-    cover_url: c.cover_url,
+    cover_url: c.cover_url || (Array.isArray(c.images) && c.images.length > 0 ? c.images[0] : null),
     images: c.images,
     like_count: c.like_count,
     designer_id: c.designer_id,

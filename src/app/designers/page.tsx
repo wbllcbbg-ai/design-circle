@@ -124,7 +124,7 @@ export default function DesignersPage() {
                   </div>
                   <div className="flex items-center gap-3 mt-1.5 text-xs text-zinc-400">
                     <span className="text-amber-500">{d.avg_rating}</span>
-                    <span>{d.case_count}个案例</span>
+                    {d.case_count > 0 && <span>{d.case_count}个案例</span>}
                   </div>
                 </div>
                 <svg className="w-4 h-4 text-zinc-300 mt-1 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

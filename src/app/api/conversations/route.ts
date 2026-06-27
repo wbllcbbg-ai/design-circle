@@ -1,6 +1,6 @@
 import { createDirectClient } from "@/lib/supabase/client"
 import { NextResponse } from "next/server"
-import { requireAuth } from "@/lib/auth-guard"
+import { requireAuth, requireAdmin } from "@/lib/auth-guard"
 
 export const dynamic = "force-dynamic"
 
@@ -12,7 +12,9 @@ export async function GET(req: Request) {
   const supabase = createDirectClient()
 
   if (all) {
-    // 管理员查看所有对话
+    // 管理员查看所有对话（必须鉴权 admin，否则隐私泄露）
+    const guard = await requireAdmin(req)
+    if (guard) return guard
     const { data: convs } = await supabase
       .from("conversations")
       .select(`

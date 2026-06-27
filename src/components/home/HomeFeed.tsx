@@ -8,7 +8,7 @@ import { CaseCardSkeleton } from "@/components/ui/skeleton"
 import { Heart, Star } from "lucide-react"
 import type { FeedItem } from "@/lib/types"
 
-const TABS = ["推荐", "整屋", "攻略", "设计师"]
+const TABS = ["推荐", "整屋", "攻略"]
 
 export function HomeFeed({
   initialItems,

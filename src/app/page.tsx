@@ -8,10 +8,10 @@ export const dynamic = "force-dynamic"
 
 
 const FUNC_ENTRIES = [
-  { label: "整屋案例", to: "/cases", icon: Building2 },
-  { label: "找灵感", to: "/cases", icon: Eye },
+  { label: "装修案例", to: "/cases", icon: Building2 },
+  { label: "装修攻略", to: "/articles", icon: ListTodo },
   { label: "找设计师", to: "/designers", icon: Palette },
-  { label: "好物清单", to: "/articles", icon: ListTodo },
+  { label: "发现服务", to: "/discover", icon: Eye },
 ]
 
 async function getInitialFeed(): Promise<{ items: FeedItem[]; hasMore: boolean }> {
