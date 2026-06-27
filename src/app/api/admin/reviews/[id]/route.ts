@@ -35,8 +35,21 @@ export async function PUT(req, { params }: { params: Promise<{ id: string }> }) 
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // 审批通过时发通知 —— 仅当之前不是 approved（避免与业主提交时的自动通知重复）
+  // 审批通过时发通知 + 更新设计师评分统计 —— 仅当之前不是 approved
   if (status === "approved" && !wasApproved && data.designer) {
+    // 更新设计师 avg_rating / review_count
+    const { data: stats } = await supabase
+      .from("reviews")
+      .select("rating")
+      .eq("designer_id", data.designer_id)
+      .eq("review_status", "approved")
+    const allRatings = (stats || []).map((r: { rating: number }) => r.rating)
+    const avg = allRatings.length > 0 ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length : 0
+    await supabase
+      .from("designers")
+      .update({ avg_rating: Math.round(avg * 10) / 10, review_count: allRatings.length })
+      .eq("id", data.designer_id)
+
     const { data: actor } = await supabase.from("users").select("nickname").eq("id", data.user_id).single()
     await supabase.from("notifications").insert({
       user_id: data.designer.user_id,

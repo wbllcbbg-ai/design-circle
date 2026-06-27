@@ -84,6 +84,21 @@ export async function POST(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // 更新设计师评分统计（avg_rating / review_count），仅在 approved 时
+  if (review_status === "approved") {
+    const { data: stats } = await supabase
+      .from("reviews")
+      .select("rating")
+      .eq("designer_id", designer_id)
+      .eq("review_status", "approved")
+    const allRatings = (stats || []).map((r: { rating: number }) => r.rating)
+    const avg = allRatings.length > 0 ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length : 0
+    await supabase
+      .from("designers")
+      .update({ avg_rating: Math.round(avg * 10) / 10, review_count: allRatings.length })
+      .eq("id", designer_id)
+  }
+
   // 插入审核标记
   if (flags.length > 0) {
     for (const flag_type of flags) {
